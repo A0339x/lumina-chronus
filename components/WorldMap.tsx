@@ -89,7 +89,7 @@ interface HoverInfo {
 }
 
 // Map projection constants (must match ComposableMap settings)
-const MAP_CENTER_LAT = 0; // Center latitude from projectionConfig
+const MAP_CENTER_LAT = 20; // Center latitude from projectionConfig
 
 // Convert screen coordinates to lat/lng based on equirectangular projection
 const screenToLatLng = (
@@ -545,7 +545,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             const centerLng = getTimezoneLongitude(offset);
             const lngVariation = (Math.random() - 0.5) * 15;
             const sparkLng = centerLng + lngVariation;
-            const sparkLat = Math.random() * 160 - 75; // Range: -75 to +85 latitude
+            const sparkLat = Math.random() * 130 - 60;
             const x = lngToX(sparkLng, canvas.width, offset);
             const y = ((-1 * sparkLat) + 90) * (canvas.height / 180);
             addSparkleOnLand(x, y, sparkLat, sparkLng, isCelebrating, currentIntensity);
@@ -608,11 +608,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
-            scale: 147,
-            center: [0, 0]
+            scale: 220,
+            center: [0, 20]
           }}
-          width={800}
-          height={400}
+          style={{
+            width: '100%',
+            height: '100%',
+          }}
         >
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
@@ -645,11 +647,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
-            scale: 147,
-            center: [0, 0]
+            scale: 220,
+            center: [0, 20]
           }}
-          width={800}
-          height={400}
+          style={{
+            width: '100%',
+            height: '100%',
+          }}
         >
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
