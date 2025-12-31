@@ -10,6 +10,7 @@ const RotatePrompt: React.FC = () => {
       // Only show on mobile-sized screens (< 1024px width) in portrait mode
       const isMobileSize = window.innerWidth < 1024;
       const isPortrait = window.innerHeight > window.innerWidth;
+      console.log('[RotatePrompt]', { isMobileSize, isPortrait, width: window.innerWidth, height: window.innerHeight });
       setShowPrompt(isMobileSize && isPortrait);
     };
 
