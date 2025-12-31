@@ -11,6 +11,7 @@ import TemperatureLegend from './components/TemperatureLegend';
 import MobileLegend from './components/MobileLegend';
 import UnityMessage from './components/UnityMessage';
 import Onboarding from './components/Onboarding';
+import RotatePrompt from './components/RotatePrompt';
 import { TemperatureProvider } from './contexts/TemperatureContext';
 import { Loader2, Heart, Info } from 'lucide-react';
 
@@ -199,21 +200,18 @@ const App: React.FC = () => {
           <Onboarding onComplete={() => setShowOnboarding(false)} />
         )}
 
+        {/* Rotate prompt for mobile portrait */}
+        <RotatePrompt />
+
         {/* Unity message when all timezones have celebrated */}
         {allCelebrated && showUnityMessage && (
           <UnityMessage onShowEarth={() => setShowUnityMessage(false)} />
         )}
 
         {/* MOBILE LAYOUT - Full screen map with overlays (up to 1024px) */}
-        <div className="lg:hidden fixed inset-0 z-10 flex items-center justify-center">
-          {/* Map container - 2:1 aspect ratio sized to fit viewport */}
-          <div
-            className="relative"
-            style={{
-              width: 'min(100vw, calc(100vh * 2))',
-              height: 'min(50vw, 100vh)',
-            }}
-          >
+        <div className="lg:hidden relative z-10 w-full h-full">
+          {/* Full screen map - users are in landscape mode */}
+          <div className="absolute inset-0">
             <WorldMap
               activeFireworks={mapFireworks}
               pastTimezones={pastTimezones}
