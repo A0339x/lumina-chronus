@@ -272,124 +272,125 @@ const AIRPORTS: Airport[] = [
   { icao: "NSTU", lat: -14.33, lng: -170.71, name: "Pago Pago" },
 ];
 
-// Cache for METAR temperatures
-interface TempCache {
-  temps: Map<string, number>;
-  lastFetch: number;
-}
+// Hardcoded temperatures for December 31st - no API calls needed
+// These are realistic temperatures based on typical late December weather patterns
+const HARDCODED_TEMPS: Record<string, number> = {
+  // UTC+14 to UTC+12 - Pacific Islands & New Zealand (Summer)
+  "NZAA": 22, "NZWN": 18, "NZCH": 20, "NFFN": 29, "UHPP": -12,
 
-const CACHE_DURATION = 60 * 60 * 1000; // 1 hour (increased to reduce API calls)
-const STORAGE_KEY = 'lumina-chronos-weather-cache';
+  // UTC+11 - Solomon Islands, Vanuatu
+  "NVVV": 28, "AGGH": 30, "NWWW": 27, "UHMM": -18,
 
-// Try to load cache from localStorage
-const loadCacheFromStorage = (): TempCache => {
-  try {
-    const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (Date.now() - parsed.lastFetch < CACHE_DURATION) {
-        return {
-          temps: new Map(Object.entries(parsed.temps)),
-          lastFetch: parsed.lastFetch
-        };
-      }
-    }
-  } catch (e) {
-    // Ignore storage errors
-  }
-  return { temps: new Map(), lastFetch: 0 };
+  // UTC+10 - Eastern Australia (Summer), Papua New Guinea
+  "YSSY": 26, "YMML": 24, "YBBN": 28, "AYPY": 29, "UHWW": -8, "PGUM": 28,
+
+  // UTC+9:30 - Central Australia (Summer)
+  "YPAD": 28, "YPDN": 33,
+
+  // UTC+9 - Japan, Korea (Winter)
+  "RJTT": 8, "RJAA": 7, "RJBB": 9, "RKSI": -2, "RKSS": -1, "RKPK": 4,
+  "RJCC": -4, "UEEE": -38,
+
+  // UTC+8 - China (Winter), Singapore/Malaysia (Tropical)
+  "ZBAA": -4, "ZSPD": 6, "ZGGG": 16, "ZGSZ": 18, "VHHH": 17, "RCTP": 16,
+  "WSSS": 28, "RPLL": 27, "WMKK": 28, "YPPH": 32, "ZMUB": -22, "UIII": -18,
+
+  // UTC+7 - Thailand, Vietnam, Indonesia (Tropical/Warm)
+  "VTBS": 28, "VVNB": 18, "VVTS": 28, "WIII": 29, "UNNT": -14, "UNKL": -16,
+
+  // UTC+6:30 - Myanmar
+  "VYYY": 24,
+
+  // UTC+6 - Bangladesh, Central Asia (Winter)
+  "VGHS": 18, "UAAA": -6, "UACC": -10, "UTTT": 4, "UNOO": -16,
+
+  // UTC+5:45 - Nepal
+  "VNKT": 12,
+
+  // UTC+5:30 - India, Sri Lanka
+  "VIDP": 14, "VABB": 24, "VOBL": 22, "VECC": 18, "VOMM": 26, "VCBI": 28,
+
+  // UTC+5 - Pakistan
+  "OPKC": 18, "OPRN": 10, "OPLA": 12, "USSS": -14,
+
+  // UTC+4:30 - Afghanistan
+  "OAKB": 4,
+
+  // UTC+4 - UAE, Gulf (Mild Winter)
+  "OMDB": 22, "OMAA": 20, "OOMS": 24, "UBBB": 8, "UGGG": 6, "UDYZ": 2,
+  "FIMP": 28, "FMEE": 26,
+
+  // UTC+3:30 - Iran
+  "OIIE": 6, "OIMM": 4,
+
+  // UTC+3 - Moscow (Winter), East Africa
+  "UUEE": -8, "UUDD": -7, "ULLI": -6, "LTFM": 10, "OERK": 18, "OEJN": 24,
+  "ORBI": 12, "OTHH": 20, "OKBK": 16, "HKJK": 22, "HAAB": 18, "HTDA": 30,
+  "FMMI": 24,
+
+  // UTC+2 - Eastern Europe (Winter), Southern Africa (Summer)
+  "HECA": 16, "LGAV": 12, "LLBG": 14, "UKBB": 0, "LROP": 4, "EFHK": -4,
+  "LBSF": 2, "FAOR": 26, "FACT": 24, "FVHA": 28,
+
+  // UTC+1 - Central Europe (Winter), West Africa
+  "LFPG": 6, "EDDF": 4, "EDDM": 2, "LIRF": 10, "LEMD": 8, "LEBL": 12,
+  "EHAM": 6, "EBBR": 6, "LOWW": 2, "EPWA": 0, "LKPR": 2, "LHBP": 4,
+  "ESSA": -2, "EKCH": 4, "ENGM": -4, "LSZH": 2, "DNMM": 28, "DAAG": 14,
+  "DTTA": 14,
+
+  // UTC+0 - UK (Winter), West Africa
+  "EGLL": 8, "EGKK": 8, "EIDW": 8, "LPPT": 14, "BIKF": 2, "DGAA": 30,
+  "GOBD": 24, "GMMN": 16,
+
+  // UTC-1 - Cape Verde, Azores
+  "GVNP": 24, "LPAZ": 16,
+
+  // UTC-3 - Brazil (Summer), Argentina (Summer)
+  "SBGR": 26, "SBGL": 28, "SBBR": 24, "SAEZ": 28, "SUMU": 26, "SCEL": 24,
+  "SLLP": 10, "SGAS": 32,
+
+  // UTC-3:30 - Newfoundland (Winter)
+  "CYYT": -4,
+
+  // UTC-4 - Atlantic Canada (Winter), Caribbean
+  "CYHZ": -2, "TJSJ": 26, "MDSD": 28, "SVMI": 26, "SBBV": 28,
+
+  // UTC-5 - Eastern US/Canada (Winter), Colombia, Peru
+  "KJFK": 4, "KLGA": 4, "KEWR": 4, "KORD": -2, "KATL": 10, "KMIA": 22,
+  "KBOS": 2, "KDCA": 6, "KIAD": 4, "KPHL": 4, "KDTW": -2, "CYYZ": -4,
+  "CYUL": -8, "CYOW": -10, "SKBO": 16, "SPJC": 22, "SEQM": 16, "MUHA": 24,
+  "MKJP": 28, "MPTO": 28,
+
+  // UTC-6 - Central US/Canada (Winter), Mexico, Central America
+  "KDFW": 10, "KIAH": 14, "KAUS": 12, "KMSP": -10, "KSTL": 2, "KMSY": 14,
+  "CYWG": -18, "MMMX": 14, "MMUN": 26, "MGGT": 20, "MHTG": 22, "MSSS": 26,
+  "MNMG": 28, "MROC": 22,
+
+  // UTC-7 - Mountain US/Canada (Winter), Mexico
+  "KDEN": 2, "KPHX": 16, "KSLC": -2, "KABQ": 4, "KELP": 10, "KBOI": -2,
+  "CYYC": -8, "CYEG": -14, "MMCU": 12, "MMHO": 18,
+
+  // UTC-8 - Pacific US/Canada (Winter)
+  "KLAX": 16, "KSFO": 12, "KSEA": 6, "KSAN": 16, "KLAS": 10, "KPDX": 6,
+  "CYVR": 4, "MMTJ": 16,
+
+  // UTC-9 - Alaska (Winter)
+  "PANC": -8, "PAFA": -22, "PAJN": -2,
+
+  // UTC-10 - Hawaii, Tahiti
+  "PHNL": 24, "PHOG": 22, "NTAA": 28,
+
+  // UTC-11 - American Samoa
+  "NSTU": 28,
 };
 
-// Save cache to localStorage
-const saveCacheToStorage = (cache: TempCache): void => {
-  try {
-    const toStore = {
-      temps: Object.fromEntries(cache.temps),
-      lastFetch: cache.lastFetch
-    };
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
-  } catch (e) {
-    // Ignore storage errors
-  }
-};
+// Convert to Map for faster lookups
+const tempCache = new Map<string, number>(Object.entries(HARDCODED_TEMPS));
 
-let tempCache: TempCache = loadCacheFromStorage();
-let isFetching = false; // Prevent concurrent fetches
-
-// Helper to delay between API calls
-const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-// Fetch weather data for all airports using Open-Meteo (CORS-friendly)
+// No-op function - no API calls needed with hardcoded data
 export const fetchAllMetar = async (): Promise<void> => {
-  // Check if cache is still valid
-  if (Date.now() - tempCache.lastFetch < CACHE_DURATION && tempCache.temps.size > 0) {
-    return;
-  }
-
-  // Prevent concurrent fetches (React Strict Mode calls effects twice)
-  if (isFetching) {
-    return;
-  }
-  isFetching = true;
-
-  try {
-    // Open-Meteo supports multiple locations in one request
-    // Batch airports into groups to avoid URL length limits
-    const batchSize = 50;
-    const newTemps = new Map<string, number>();
-
-    for (let i = 0; i < AIRPORTS.length; i += batchSize) {
-      const batch = AIRPORTS.slice(i, i + batchSize);
-      const lats = batch.map(a => a.lat).join(',');
-      const lngs = batch.map(a => a.lng).join(',');
-
-      // Add delay between batches to avoid rate limiting
-      if (i > 0) {
-        await delay(500);
-      }
-
-      const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current_weather=true`
-      );
-
-      if (!response.ok) {
-        if (response.status === 429) {
-          console.warn('Rate limited by Open-Meteo, waiting before retry...');
-          await delay(2000);
-          // Skip this batch, continue with next
-          continue;
-        }
-        throw new Error(`Weather fetch failed: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      // Handle both single and multiple location responses
-      if (Array.isArray(data)) {
-        data.forEach((item: any, idx: number) => {
-          if (item.current_weather?.temperature !== undefined) {
-            newTemps.set(batch[idx].icao, item.current_weather.temperature);
-          }
-        });
-      } else if (data.current_weather?.temperature !== undefined) {
-        // Single location response
-        newTemps.set(batch[0].icao, data.current_weather.temperature);
-      }
-    }
-
-    if (newTemps.size > 0) {
-      tempCache = {
-        temps: newTemps,
-        lastFetch: Date.now()
-      };
-      saveCacheToStorage(tempCache);
-      console.log(`Weather: Loaded ${newTemps.size} airport temperatures`);
-    }
-  } catch (error) {
-    console.warn('Weather fetch failed, will use estimates:', error);
-  } finally {
-    isFetching = false;
-  }
+  // Temperatures are hardcoded, no fetching needed
+  return;
 };
 
 // Get temperature for a location (finds nearest airport)
@@ -414,7 +415,7 @@ export const getMetarTemp = (lat: number, lng: number): number | null => {
 
   // Only use if within ~15 degrees (roughly one timezone width)
   if (nearestAirport && nearestDist < 15) {
-    const temp = tempCache.temps.get(nearestAirport.icao);
+    const temp = tempCache.get(nearestAirport.icao);
     if (temp !== undefined) {
       return temp;
     }
@@ -426,9 +427,9 @@ export const getMetarTemp = (lat: number, lng: number): number | null => {
 // Get all airport data for direct access
 export const getAirports = (): Airport[] => AIRPORTS;
 
-// Check if cache is populated
+// Check if cache is populated (always true with hardcoded data)
 export const isMetarCacheReady = (): boolean => {
-  return tempCache.temps.size > 0;
+  return tempCache.size > 0;
 };
 
 // Get temperature with fallback to estimate
@@ -481,7 +482,7 @@ export const getNearestAirportInfo = (lat: number, lng: number): NearestAirportI
   if (!nearestAirport) return null;
 
   // Get temperature from cache or estimate
-  let temp = tempCache.temps.get(nearestAirport.icao);
+  let temp = tempCache.get(nearestAirport.icao);
   if (temp === undefined) {
     temp = getTempWithFallback(nearestAirport.lat, nearestAirport.lng);
   }
