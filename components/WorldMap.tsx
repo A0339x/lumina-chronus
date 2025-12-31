@@ -149,6 +149,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const celebrationIntensityRef = useRef(0);
   const previousTimezonesRef = useRef<Set<number>>(new Set());
   const devCelebrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const celebrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   const { unit, formatTemp } = useTemperature();
 
@@ -286,23 +287,41 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     previousTimezonesRef.current = currentOffsets;
 
     if (newOffset !== null) {
+      // Clear any existing celebration interval
+      if (celebrationIntervalRef.current) {
+        clearInterval(celebrationIntervalRef.current);
+        celebrationIntervalRef.current = null;
+      }
+
       // New timezone just hit midnight!
       newestTimezoneOffsetRef.current = newOffset;
       celebrationIntensityRef.current = 1;
 
       // Gradually fade out celebration over 15 seconds
-      const fadeInterval = setInterval(() => {
+      celebrationIntervalRef.current = setInterval(() => {
         celebrationIntensityRef.current -= 0.02;
         if (celebrationIntensityRef.current <= 0) {
-          clearInterval(fadeInterval);
+          if (celebrationIntervalRef.current) {
+            clearInterval(celebrationIntervalRef.current);
+            celebrationIntervalRef.current = null;
+          }
           newestTimezoneOffsetRef.current = null;
           celebrationIntensityRef.current = 0;
         }
       }, 300); // Every 300ms
-
-      return () => clearInterval(fadeInterval);
     }
+    // Note: We intentionally don't clean up the interval on effect re-run
+    // The interval manages itself and clears when celebration ends
   }, [pastTimezones]);
+
+  // Cleanup celebration interval on unmount
+  useEffect(() => {
+    return () => {
+      if (celebrationIntervalRef.current) {
+        clearInterval(celebrationIntervalRef.current);
+      }
+    };
+  }, []);
 
   // Create land mask from the hidden mask map
   useEffect(() => {
