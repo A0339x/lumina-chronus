@@ -89,7 +89,7 @@ interface HoverInfo {
 }
 
 // Map projection constants (must match ComposableMap settings)
-const MAP_CENTER_LAT = 20; // Center latitude from projectionConfig
+const MAP_CENTER_LAT = 0; // Center latitude from projectionConfig
 
 // Convert screen coordinates to lat/lng based on equirectangular projection
 const screenToLatLng = (
@@ -604,16 +604,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       <canvas ref={maskCanvasRef} className="hidden" />
 
       {/* Hidden map for land mask detection */}
-      <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true">
+      <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none flex items-center" aria-hidden="true">
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
-            scale: 220,
-            center: [0, 20]
+            scale: 147,
+            center: [0, 0]
           }}
+          width={800}
+          height={400}
           style={{
             width: '100%',
-            height: '100%',
+            height: 'auto',
           }}
         >
           <Geographies geography={geoUrl}>
@@ -640,19 +642,21 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       {/* Vector World Map */}
       <div
         ref={mapContainerRef}
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full flex items-center"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleCountryLeave}
       >
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
-            scale: 220,
-            center: [0, 20]
+            scale: 147,
+            center: [0, 0]
           }}
+          width={800}
+          height={400}
           style={{
             width: '100%',
-            height: '100%',
+            height: 'auto',
           }}
         >
           <Geographies geography={geoUrl}>
