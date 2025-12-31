@@ -204,19 +204,11 @@ const App: React.FC = () => {
           <UnityMessage onShowEarth={() => setShowUnityMessage(false)} />
         )}
 
-        {/* MOBILE LAYOUT - Full screen map with overlays */}
-        <div className="md:hidden relative z-10 w-full h-full">
-          {/* Map container - centers and scales to fit full map in any orientation */}
-          <div className="absolute inset-0 flex items-center justify-center p-2">
-            <div
-              className="relative"
-              style={{
-                aspectRatio: '2 / 1',
-                width: '100%',
-                maxWidth: 'calc(100vh * 2)',
-                maxHeight: '100%',
-              }}
-            >
+        {/* MOBILE LAYOUT - Full screen map with overlays (up to 1024px) */}
+        <div className="lg:hidden relative z-10 w-full h-full">
+          {/* Map container - fixed 2:1 aspect ratio, centered */}
+          <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+            <div className="w-full aspect-[2/1]">
               <WorldMap
                 activeFireworks={mapFireworks}
                 pastTimezones={pastTimezones}
@@ -253,8 +245,8 @@ const App: React.FC = () => {
           )}
         </div>
 
-        {/* DESKTOP LAYOUT - Original centered layout */}
-        <div className="hidden md:flex relative z-10 w-full h-full overflow-hidden flex-col items-center p-2 sm:p-3">
+        {/* DESKTOP LAYOUT - Original centered layout (1024px and up) */}
+        <div className="hidden lg:flex relative z-10 w-full h-full overflow-hidden flex-col items-center p-2 sm:p-3">
 
           {/* Top Section: Compact Countdown */}
           <section className="w-full max-w-4xl flex justify-center shrink-0">
