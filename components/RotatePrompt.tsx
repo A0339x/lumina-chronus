@@ -10,8 +10,17 @@ const RotatePrompt: React.FC = () => {
       // Only show on mobile-sized screens (< 1024px width) in portrait mode
       const isMobileSize = window.innerWidth < 1024;
       const isPortrait = window.innerHeight > window.innerWidth;
-      console.log('[RotatePrompt]', { isMobileSize, isPortrait, width: window.innerWidth, height: window.innerHeight });
       setShowPrompt(isMobileSize && isPortrait);
+    };
+
+    const resetZoom = () => {
+      // Reset zoom to 1.0 on orientation change
+      const viewport = document.querySelector('meta[name="viewport"]');
+      if (viewport) {
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no');
+      }
+      // Force scroll to top-left
+      window.scrollTo(0, 0);
     };
 
     // Check on mount
@@ -19,7 +28,11 @@ const RotatePrompt: React.FC = () => {
 
     // Listen for resize/orientation changes
     window.addEventListener('resize', checkOrientation);
-    window.addEventListener('orientationchange', checkOrientation);
+    window.addEventListener('orientationchange', () => {
+      checkOrientation();
+      // Small delay to let the browser settle after rotation
+      setTimeout(resetZoom, 100);
+    });
 
     return () => {
       window.removeEventListener('resize', checkOrientation);
