@@ -78,8 +78,11 @@ const RotatePrompt: React.FC = () => {
             <h2 className="text-xl font-light text-white mb-2">
               Rotate Your Device
             </h2>
-            <p className="text-white/50 text-sm max-w-xs">
+            <p className="text-white/50 text-sm max-w-xs mb-4">
               For the best experience viewing the world map, please rotate your phone to landscape mode.
+            </p>
+            <p className="text-white/30 text-xs max-w-xs">
+              For the full experience, visit on a desktop or computer.
             </p>
           </div>
         </motion.div>
