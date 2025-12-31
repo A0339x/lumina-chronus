@@ -545,7 +545,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             const centerLng = getTimezoneLongitude(offset);
             const lngVariation = (Math.random() - 0.5) * 15;
             const sparkLng = centerLng + lngVariation;
-            const sparkLat = Math.random() * 130 - 60;
+            const sparkLat = Math.random() * 160 - 75; // Range: -75 to +85 latitude
             const x = lngToX(sparkLng, canvas.width, offset);
             const y = ((-1 * sparkLat) + 90) * (canvas.height / 180);
             addSparkleOnLand(x, y, sparkLat, sparkLng, isCelebrating, currentIntensity);
