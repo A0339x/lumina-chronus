@@ -206,14 +206,24 @@ const App: React.FC = () => {
 
         {/* MOBILE LAYOUT - Full screen map with overlays */}
         <div className="md:hidden relative z-10 w-full h-full">
-          {/* Full screen map */}
-          <div className="absolute inset-0">
-            <WorldMap
-              activeFireworks={mapFireworks}
-              pastTimezones={pastTimezones}
-              devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
-              devTrigger={devCelebrationKey}
-            />
+          {/* Map container - centers and scales to fit full map in any orientation */}
+          <div className="absolute inset-0 flex items-center justify-center p-2">
+            <div
+              className="relative"
+              style={{
+                aspectRatio: '2 / 1',
+                width: '100%',
+                maxWidth: 'calc(100vh * 2)',
+                maxHeight: '100%',
+              }}
+            >
+              <WorldMap
+                activeFireworks={mapFireworks}
+                pastTimezones={pastTimezones}
+                devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
+                devTrigger={devCelebrationKey}
+              />
+            </div>
           </div>
 
           {/* Countdown - Top Left */}
