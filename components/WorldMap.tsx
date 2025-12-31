@@ -604,7 +604,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       <canvas ref={maskCanvasRef} className="hidden" />
 
       {/* Hidden map for land mask detection */}
-      <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true">
+      <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none flex items-center justify-center [&_svg]:max-w-full [&_svg]:max-h-full [&_svg]:w-auto [&_svg]:h-auto" aria-hidden="true">
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
@@ -638,7 +638,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       {/* Vector World Map */}
       <div
         ref={mapContainerRef}
-        className="absolute inset-0 w-full h-full"
+        className="absolute inset-0 w-full h-full flex items-center justify-center [&_svg]:max-w-full [&_svg]:max-h-full [&_svg]:w-auto [&_svg]:h-auto"
         onMouseMove={handleMouseMove}
         onMouseLeave={handleCountryLeave}
       >
