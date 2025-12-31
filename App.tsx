@@ -205,17 +205,21 @@ const App: React.FC = () => {
         )}
 
         {/* MOBILE LAYOUT - Full screen map with overlays (up to 1024px) */}
-        <div className="lg:hidden relative z-10 w-full h-full">
-          {/* Map container - fixed 2:1 aspect ratio, centered */}
-          <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-            <div className="w-full aspect-[2/1]">
-              <WorldMap
-                activeFireworks={mapFireworks}
-                pastTimezones={pastTimezones}
-                devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
-                devTrigger={devCelebrationKey}
-              />
-            </div>
+        <div className="lg:hidden fixed inset-0 z-10 flex items-center justify-center">
+          {/* Map container - 2:1 aspect ratio sized to fit viewport */}
+          <div
+            className="relative"
+            style={{
+              width: 'min(100vw, calc(100vh * 2))',
+              height: 'min(50vw, 100vh)',
+            }}
+          >
+            <WorldMap
+              activeFireworks={mapFireworks}
+              pastTimezones={pastTimezones}
+              devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
+              devTrigger={devCelebrationKey}
+            />
           </div>
 
           {/* Countdown - Top Left */}
