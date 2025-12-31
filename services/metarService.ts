@@ -278,12 +278,42 @@ interface TempCache {
   lastFetch: number;
 }
 
-let tempCache: TempCache = {
-  temps: new Map(),
-  lastFetch: 0
+const CACHE_DURATION = 60 * 60 * 1000; // 1 hour (increased to reduce API calls)
+const STORAGE_KEY = 'lumina-chronos-weather-cache';
+
+// Try to load cache from localStorage
+const loadCacheFromStorage = (): TempCache => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Date.now() - parsed.lastFetch < CACHE_DURATION) {
+        return {
+          temps: new Map(Object.entries(parsed.temps)),
+          lastFetch: parsed.lastFetch
+        };
+      }
+    }
+  } catch (e) {
+    // Ignore storage errors
+  }
+  return { temps: new Map(), lastFetch: 0 };
 };
 
-const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
+// Save cache to localStorage
+const saveCacheToStorage = (cache: TempCache): void => {
+  try {
+    const toStore = {
+      temps: Object.fromEntries(cache.temps),
+      lastFetch: cache.lastFetch
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(toStore));
+  } catch (e) {
+    // Ignore storage errors
+  }
+};
+
+let tempCache: TempCache = loadCacheFromStorage();
 let isFetching = false; // Prevent concurrent fetches
 
 // Helper to delay between API calls
@@ -352,6 +382,7 @@ export const fetchAllMetar = async (): Promise<void> => {
         temps: newTemps,
         lastFetch: Date.now()
       };
+      saveCacheToStorage(tempCache);
       console.log(`Weather: Loaded ${newTemps.size} airport temperatures`);
     }
   } catch (error) {
