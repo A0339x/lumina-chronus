@@ -142,6 +142,82 @@ export function getAirlineFromCallsign(callsign: string): { name: string; countr
   return AIRLINE_PREFIXES[prefix] || null;
 }
 
+// Flight route data from adsbdb API
+interface AdsbdbRouteResponse {
+  response: {
+    flightroute: {
+      callsign: string;
+      callsign_icao: string;
+      callsign_iata: string;
+      airline: {
+        name: string;
+        icao: string;
+        iata: string;
+        country: string;
+        callsign: string;
+      };
+      origin: {
+        country_iso_name: string;
+        country_name: string;
+        elevation: number;
+        iata_code: string;
+        icao_code: string;
+        latitude: number;
+        longitude: number;
+        municipality: string;
+        name: string;
+      };
+      destination: {
+        country_iso_name: string;
+        country_name: string;
+        elevation: number;
+        iata_code: string;
+        icao_code: string;
+        latitude: number;
+        longitude: number;
+        municipality: string;
+        name: string;
+      };
+    };
+  };
+}
+
+// Cache for route data (doesn't change during flight)
+const routeCache = new Map<string, AdsbdbRouteResponse['response']['flightroute'] | null>();
+
+// Fetch flight route from adsbdb (origin, destination, airline)
+async function fetchFlightRoute(callsign: string): Promise<AdsbdbRouteResponse['response']['flightroute'] | null> {
+  // Check cache first
+  if (routeCache.has(callsign)) {
+    return routeCache.get(callsign) || null;
+  }
+
+  try {
+    const response = await fetch(
+      `https://api.adsbdb.com/v0/callsign/${callsign}`,
+      { signal: AbortSignal.timeout(5000) }
+    );
+
+    if (!response.ok) {
+      routeCache.set(callsign, null); // Cache the miss
+      return null;
+    }
+
+    const data = await response.json() as AdsbdbRouteResponse;
+    if (data.response?.flightroute) {
+      console.log(`[Flight] Route found for ${callsign}: ${data.response.flightroute.origin.icao_code} → ${data.response.flightroute.destination.icao_code}`);
+      routeCache.set(callsign, data.response.flightroute);
+      return data.response.flightroute;
+    }
+
+    routeCache.set(callsign, null);
+    return null;
+  } catch (error) {
+    console.warn(`[Flight] adsbdb error for ${callsign}:`, error);
+    return null;
+  }
+}
+
 // ADS-B data sources in order of preference
 interface ADSBSource {
   name: string;
@@ -360,6 +436,12 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
 
   const positions = new Map<string, FlightPosition>();
 
+  // Fetch route data for all callsigns in parallel (if not already cached)
+  const routePromises = callsigns
+    .filter(cs => !routeCache.has(cs))
+    .map(cs => fetchFlightRoute(cs));
+  await Promise.all(routePromises);
+
   // Try each callsign against ADS-B sources
   for (const callsign of callsigns) {
     let found = false;
@@ -432,10 +514,13 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
         alertSeverity,
       });
     } else {
-      // Look up airline from callsign prefix
+      // Look up airline from callsign prefix (fallback)
       const airlineInfo = getAirlineFromCallsign(callsign);
-      const flightNumber = callsign.replace(/^([A-Z]{2,3})/, (match) => {
-        // Convert ICAO to IATA-style (ACA123 -> AC123)
+
+      // Try to get route data from adsbdb (async, but we'll use cached if available)
+      const routeData = routeCache.get(callsign);
+
+      const flightNumber = routeData?.callsign_iata || callsign.replace(/^([A-Z]{2,3})/, (match) => {
         const iataMap: Record<string, string> = {
           'ACA': 'AC', 'AAL': 'AA', 'UAL': 'UA', 'DAL': 'DL', 'SWA': 'WN',
           'JBU': 'B6', 'ASA': 'AS', 'WJA': 'WS', 'BAW': 'BA', 'DLH': 'LH',
@@ -448,10 +533,20 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
       newCache.set(callsign, {
         flightNumber,
         callsign,
-        airline: airlineInfo?.name || 'Private/Unknown',
+        airline: routeData?.airline?.name || airlineInfo?.name || 'Private/Unknown',
         aircraft: '',
-        origin: { icao: '', name: '', lat: 0, lng: 0 },
-        destination: { icao: '', name: '', lat: 0, lng: 0 },
+        origin: routeData ? {
+          icao: routeData.origin.icao_code,
+          name: routeData.origin.municipality || routeData.origin.name,
+          lat: routeData.origin.latitude,
+          lng: routeData.origin.longitude,
+        } : { icao: '', name: '', lat: 0, lng: 0 },
+        destination: routeData ? {
+          icao: routeData.destination.icao_code,
+          name: routeData.destination.municipality || routeData.destination.name,
+          lat: routeData.destination.latitude,
+          lng: routeData.destination.longitude,
+        } : { icao: '', name: '', lat: 0, lng: 0 },
         departureTime: '',
         arrivalTime: '',
         duration: '',
