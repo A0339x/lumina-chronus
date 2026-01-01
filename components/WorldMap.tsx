@@ -175,6 +175,24 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const devCelebrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const celebrationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Refs for animation loop to avoid restarting when props change
+  const pastTimezonesRef = useRef<TimezoneData[]>(pastTimezones);
+  const allCelebratedRef = useRef<boolean>(allCelebrated || false);
+  const activeFireworksRef = useRef<FireworkEvent[]>(activeFireworks);
+
+  // Keep refs in sync with props
+  useEffect(() => {
+    pastTimezonesRef.current = pastTimezones;
+  }, [pastTimezones]);
+
+  useEffect(() => {
+    allCelebratedRef.current = allCelebrated || false;
+  }, [allCelebrated]);
+
+  useEffect(() => {
+    activeFireworksRef.current = activeFireworks;
+  }, [activeFireworks]);
+
   const { unit, formatTemp } = useTemperature();
 
   // Handle country hover (just set the country)
@@ -625,7 +643,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       };
 
       // When all timezones have celebrated, sparkle the entire globe
-      if (allCelebrated) {
+      if (allCelebratedRef.current) {
         // Generate random sparkles across the globe
         for (let i = 0; i < 3; i++) {
           if (Math.random() > 0.7) {
@@ -651,14 +669,14 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         }
       } else {
         // For each past timezone, generate sparkles in vertical bands on land
-        pastTimezones.forEach(tz => {
+        pastTimezonesRef.current.forEach(tz => {
           const isCelebrating = tz.offset === celebratingOffset && currentIntensity > 0;
           generateSparklesForOffset(tz.offset, isCelebrating);
         });
 
         // Also spawn sparkles at airports in past timezones (ensures small landmasses get coverage)
         const airports = getAirports();
-        const pastOffsets = new Set(pastTimezones.map(tz => tz.offset));
+        const pastOffsets = new Set(pastTimezonesRef.current.map(tz => tz.offset));
         if (Math.random() > 0.9) {
           // Find airports roughly in past timezone longitudes
           const eligibleAirports = airports.filter(ap => {
@@ -675,7 +693,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
         // Dev mode: also generate celebration sparkles for the celebrating offset even if not in pastTimezones
         if (celebratingOffset !== null && currentIntensity > 0) {
-          const isAlreadyInPast = pastTimezones.some(tz => tz.offset === celebratingOffset);
+          const isAlreadyInPast = pastTimezonesRef.current.some(tz => tz.offset === celebratingOffset);
           if (!isAlreadyInPast) {
             generateSparklesForOffset(celebratingOffset, true);
           }
@@ -683,8 +701,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       }
 
       // Active fireworks (current timezone hitting midnight) - skip when all celebrated
-      if (!allCelebrated) {
-        activeFireworks.forEach(fw => {
+      if (!allCelebratedRef.current) {
+        activeFireworksRef.current.forEach(fw => {
           if (Math.random() > 0.5) {
             const { x, y } = latLngToCanvas(fw.lat, fw.lng);
             addSparkleOnLand(x, y, fw.lat, fw.lng, true, 1);
@@ -712,7 +730,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [activeFireworks, pastTimezones, landMask, metarReady, allCelebrated]);
+  }, [landMask, metarReady]); // Using refs for activeFireworks, pastTimezones, allCelebrated to avoid restarting animation
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
