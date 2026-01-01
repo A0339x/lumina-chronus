@@ -122,6 +122,55 @@ const getWeatherConditionLabel = (condition: WeatherCondition, intensity: Weathe
   }
 };
 
+// Flight AC999: Montreal (YUL) to Puerto Vallarta (PVR)
+const FLIGHT_AC999 = {
+  flightNumber: 'AC999',
+  airline: 'Air Canada',
+  aircraft: 'Boeing 737 MAX 8',
+  origin: { icao: 'CYUL', name: 'Montreal-Trudeau', lat: 45.47, lng: -73.74 },
+  destination: { icao: 'MMSM', name: 'Puerto Vallarta', lat: 20.68, lng: -105.25 },
+  departureTime: '09:00',
+  arrivalTime: '13:15',
+  duration: '5h 15m',
+  distance: '3,650 km',
+  flightAttendant: 'The Best Flight Attendant',
+  status: 'In Flight',
+};
+
+// Calculate current flight progress (simulated - plane moves across the route)
+const getFlightProgress = (): number => {
+  // Simulate flight progress based on time - cycles every 5 minutes for demo
+  const now = Date.now();
+  const cycleMs = 5 * 60 * 1000; // 5 minute cycle
+  return (now % cycleMs) / cycleMs;
+};
+
+// Interpolate position along great circle path
+const interpolatePosition = (
+  lat1: number, lng1: number,
+  lat2: number, lng2: number,
+  t: number
+): { lat: number; lng: number } => {
+  // Simple linear interpolation (good enough for this distance)
+  return {
+    lat: lat1 + (lat2 - lat1) * t,
+    lng: lng1 + (lng2 - lng1) * t,
+  };
+};
+
+// Calculate heading/bearing between two points
+const calculateBearing = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const lat1Rad = lat1 * Math.PI / 180;
+  const lat2Rad = lat2 * Math.PI / 180;
+
+  const x = Math.sin(dLng) * Math.cos(lat2Rad);
+  const y = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+
+  let bearing = Math.atan2(x, y) * 180 / Math.PI;
+  return (bearing + 360) % 360;
+};
+
 interface WorldMapProps {
   activeFireworks: FireworkEvent[];
   pastTimezones: TimezoneData[];
@@ -131,8 +180,15 @@ interface WorldMapProps {
 }
 
 interface HoverInfo {
-  country: CountryInfo;
+  country: CountryInfo | null;
   airportInfo: NearestAirportInfo | null;
+  x: number;
+  y: number;
+}
+
+interface FlightHoverInfo {
+  flight: typeof FLIGHT_AC999;
+  progress: number;
   x: number;
   y: number;
 }
@@ -214,6 +270,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const [hoverInfo, setHoverInfo] = useState<HoverInfo | null>(null);
   const [isTooltipVisible, setIsTooltipVisible] = useState(false);
   const [currentCountry, setCurrentCountry] = useState<CountryInfo | null>(null);
+  const [flightHoverInfo, setFlightHoverInfo] = useState<FlightHoverInfo | null>(null);
+  const [isFlightTooltipVisible, setIsFlightTooltipVisible] = useState(false);
+  const flightProgressRef = useRef(0);
+  const planePositionRef = useRef<{ x: number; y: number; bearing: number } | null>(null);
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track newest timezone for celebration effect (using refs to avoid restarting animation loop)
@@ -295,6 +355,33 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     const rect = mapContainerRef.current.getBoundingClientRect();
     const localX = event.clientX - rect.left;
     const localY = event.clientY - rect.top;
+
+    // Check if hovering over the plane
+    if (planePositionRef.current) {
+      const planePos = planePositionRef.current;
+      const dx = localX - planePos.x;
+      const dy = localY - planePos.y;
+      const distToPlane = Math.sqrt(dx * dx + dy * dy);
+
+      if (distToPlane < 25) {
+        // Hovering over plane - show flight info
+        setIsFlightTooltipVisible(true);
+        setFlightHoverInfo({
+          flight: FLIGHT_AC999,
+          progress: flightProgressRef.current,
+          x: event.clientX,
+          y: event.clientY
+        });
+        // Hide country tooltip
+        setIsTooltipVisible(false);
+        return;
+      } else {
+        // Not hovering over plane
+        setIsFlightTooltipVisible(false);
+        setFlightHoverInfo(null);
+      }
+    }
+
     const { lat, lng } = screenToLatLng(localX, localY, rect.width, rect.height);
     const airportInfo = getNearestAirportInfo(lat, lng);
 
@@ -772,6 +859,107 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         }
       }
 
+      // Draw flight path AC999: Montreal to Puerto Vallarta
+      const flight = FLIGHT_AC999;
+      const progress = getFlightProgress();
+      flightProgressRef.current = progress;
+
+      const originPos = latLngToCanvas(flight.origin.lat, flight.origin.lng);
+      const destPos = latLngToCanvas(flight.destination.lat, flight.destination.lng);
+      const currentPos = interpolatePosition(
+        flight.origin.lat, flight.origin.lng,
+        flight.destination.lat, flight.destination.lng,
+        progress
+      );
+      const planeCanvasPos = latLngToCanvas(currentPos.lat, currentPos.lng);
+
+      // Calculate bearing for plane rotation
+      const bearing = calculateBearing(
+        flight.origin.lat, flight.origin.lng,
+        flight.destination.lat, flight.destination.lng
+      );
+
+      // Store plane position for hover detection
+      planePositionRef.current = { x: planeCanvasPos.x, y: planeCanvasPos.y, bearing };
+
+      // Draw the full route as a dashed line
+      ctx.save();
+      ctx.setLineDash([5, 5]);
+      ctx.strokeStyle = 'rgba(255, 200, 50, 0.3)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(originPos.x, originPos.y);
+      ctx.lineTo(destPos.x, destPos.y);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      // Draw the traveled path as solid yellow line
+      ctx.strokeStyle = '#ffc832';
+      ctx.lineWidth = 3;
+      ctx.shadowBlur = 8;
+      ctx.shadowColor = '#ffc832';
+      ctx.beginPath();
+      ctx.moveTo(originPos.x, originPos.y);
+      ctx.lineTo(planeCanvasPos.x, planeCanvasPos.y);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+
+      // Draw origin and destination markers
+      // Origin (Montreal)
+      ctx.fillStyle = '#ffc832';
+      ctx.beginPath();
+      ctx.arc(originPos.x, originPos.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Destination (Puerto Vallarta)
+      ctx.strokeStyle = '#ffc832';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(destPos.x, destPos.y, 5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Draw the plane icon
+      ctx.save();
+      ctx.translate(planeCanvasPos.x, planeCanvasPos.y);
+      // Rotate to face direction of travel (bearing is from north, canvas rotation is from east)
+      ctx.rotate((bearing - 90) * Math.PI / 180);
+
+      // Draw plane shape (pointing right when rotation is 0)
+      const planeSize = 10;
+      ctx.fillStyle = '#ffc832';
+      ctx.shadowBlur = 10;
+      ctx.shadowColor = '#ffc832';
+
+      // Plane body
+      ctx.beginPath();
+      ctx.moveTo(planeSize * 1.5, 0); // Nose
+      ctx.lineTo(-planeSize, -planeSize * 0.4); // Top back
+      ctx.lineTo(-planeSize * 0.5, 0); // Back indent
+      ctx.lineTo(-planeSize, planeSize * 0.4); // Bottom back
+      ctx.closePath();
+      ctx.fill();
+
+      // Wings
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(-planeSize * 0.3, -planeSize * 1.2); // Left wing tip
+      ctx.lineTo(-planeSize * 0.6, 0);
+      ctx.lineTo(-planeSize * 0.3, planeSize * 1.2); // Right wing tip
+      ctx.closePath();
+      ctx.fill();
+
+      // Tail
+      ctx.beginPath();
+      ctx.moveTo(-planeSize * 0.8, 0);
+      ctx.lineTo(-planeSize * 1.1, -planeSize * 0.6);
+      ctx.lineTo(-planeSize, 0);
+      ctx.lineTo(-planeSize * 1.1, planeSize * 0.6);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.restore();
+      ctx.restore();
+
       animationFrameId = requestAnimationFrame(render);
     };
 
@@ -954,6 +1142,90 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 )}
               </>
             )}
+          </div>
+        )}
+      </div>
+
+      {/* Flight Tooltip */}
+      <div
+        className={`fixed z-50 pointer-events-none transition-opacity duration-200 ease-out ${
+          isFlightTooltipVisible ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{
+          left: (flightHoverInfo?.x ?? 0) + 20,
+          top: (flightHoverInfo?.y ?? 0) + 20,
+        }}
+      >
+        {flightHoverInfo && (
+          <div className="bg-slate-900/95 backdrop-blur-md border border-amber-400/30 rounded-xl px-4 py-3 shadow-2xl min-w-[280px]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2">
+                <span className="text-amber-400 font-bold text-lg">{flightHoverInfo.flight.flightNumber}</span>
+                <span className="text-white/60 text-sm">{flightHoverInfo.flight.airline}</span>
+              </div>
+              <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full">
+                {flightHoverInfo.flight.status}
+              </span>
+            </div>
+
+            {/* Route */}
+            <div className="flex items-center gap-2 mb-3">
+              <div className="text-center">
+                <p className="text-white font-medium text-sm">{flightHoverInfo.flight.origin.icao}</p>
+                <p className="text-white/50 text-[10px]">{flightHoverInfo.flight.origin.name}</p>
+              </div>
+              <div className="flex-1 flex items-center gap-1 px-2">
+                <div className="h-px flex-1 bg-amber-400/30"></div>
+                <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                </svg>
+                <div className="h-px flex-1 bg-amber-400/30"></div>
+              </div>
+              <div className="text-center">
+                <p className="text-white font-medium text-sm">{flightHoverInfo.flight.destination.icao}</p>
+                <p className="text-white/50 text-[10px]">{flightHoverInfo.flight.destination.name}</p>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="mb-3">
+              <div className="flex justify-between text-[10px] text-white/50 mb-1">
+                <span>{flightHoverInfo.flight.departureTime}</span>
+                <span>{Math.round(flightHoverInfo.progress * 100)}% Complete</span>
+                <span>{flightHoverInfo.flight.arrivalTime}</span>
+              </div>
+              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all"
+                  style={{ width: `${flightHoverInfo.progress * 100}%` }}
+                />
+              </div>
+            </div>
+
+            {/* Flight details */}
+            <div className="grid grid-cols-3 gap-2 text-center border-t border-white/10 pt-2 mb-3">
+              <div>
+                <p className="text-[10px] text-white/40 uppercase">Aircraft</p>
+                <p className="text-white/80 text-xs">{flightHoverInfo.flight.aircraft}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/40 uppercase">Duration</p>
+                <p className="text-white/80 text-xs">{flightHoverInfo.flight.duration}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/40 uppercase">Distance</p>
+                <p className="text-white/80 text-xs">{flightHoverInfo.flight.distance}</p>
+              </div>
+            </div>
+
+            {/* Flight Attendant */}
+            <div className="border-t border-white/10 pt-2">
+              <div className="flex items-center gap-2">
+                <span className="text-[10px] text-pink-300/60 uppercase tracking-wider">Flight Attendant</span>
+              </div>
+              <p className="text-pink-300 font-medium text-sm mt-0.5">{flightHoverInfo.flight.flightAttendant}</p>
+            </div>
           </div>
         )}
       </div>
