@@ -630,6 +630,7 @@ export async function getFlight(callsign: string): Promise<FlightInfo | null> {
 }
 
 // Calculate flight progress (0-1) based on current position
+// Returns -1 if route data seems invalid (plane not on expected route)
 export function calculateFlightProgress(flight: FlightInfo): number {
   if (!flight.position || flight.status !== 'In Flight') {
     return flight.status === 'Landed' ? 1 : 0;
@@ -638,7 +639,12 @@ export function calculateFlightProgress(flight: FlightInfo): number {
   const { origin, destination } = flight;
   const { latitude, longitude } = flight.position;
 
-  // Calculate total distance and distance traveled
+  // If no route data, can't calculate progress
+  if (!origin.lat || !destination.lat) {
+    return -1;
+  }
+
+  // Calculate distances
   const totalDist = haversineDistance(
     origin.lat, origin.lng,
     destination.lat, destination.lng
@@ -649,8 +655,25 @@ export function calculateFlightProgress(flight: FlightInfo): number {
     latitude, longitude
   );
 
-  // Clamp progress between 0 and 1
-  return Math.min(1, Math.max(0, distFromOrigin / totalDist));
+  const distToDestination = haversineDistance(
+    latitude, longitude,
+    destination.lat, destination.lng
+  );
+
+  // Sanity check: if plane is far from both origin AND destination,
+  // the route data is probably wrong (different route today)
+  const maxReasonableDeviation = totalDist * 0.5; // Allow 50% deviation from direct path
+  if (distFromOrigin > totalDist + maxReasonableDeviation &&
+      distToDestination > totalDist + maxReasonableDeviation) {
+    return -1; // Route data doesn't match actual flight
+  }
+
+  // Calculate progress based on how close to destination vs origin
+  // This works better than just distance from origin
+  const progress = distFromOrigin / (distFromOrigin + distToDestination);
+
+  // Clamp between 0 and 1
+  return Math.min(1, Math.max(0, progress));
 }
 
 // Haversine formula for distance between two points (returns km)

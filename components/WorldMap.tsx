@@ -1418,7 +1418,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             {/* Route - only show if we have route info */}
             {flightHoverInfo.flight.origin.icao && flightHoverInfo.flight.destination.icao && (
               <>
-                <div className="flex items-center gap-2 mb-3">
+                <div className="flex items-center gap-2 mb-2">
                   <div className="text-center">
                     <p className="text-white font-medium text-sm">{flightHoverInfo.flight.origin.icao}</p>
                     <p className="text-white/50 text-[10px]">{flightHoverInfo.flight.origin.name}</p>
@@ -1436,20 +1436,26 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                   </div>
                 </div>
 
-                {/* Progress bar - only with route */}
-                <div className="mb-3">
-                  <div className="flex justify-between text-[10px] text-white/50 mb-1">
-                    <span>{flightHoverInfo.flight.departureTime}</span>
-                    <span>{Math.round(flightHoverInfo.progress * 100)}% Complete</span>
-                    <span>{flightHoverInfo.flight.arrivalTime}</span>
+                {/* Progress bar - only show if progress is valid (not -1) */}
+                {flightHoverInfo.progress >= 0 ? (
+                  <div className="mb-3">
+                    <div className="flex justify-between text-[10px] text-white/50 mb-1">
+                      <span>{flightHoverInfo.flight.departureTime || ''}</span>
+                      <span>{Math.round(flightHoverInfo.progress * 100)}% Complete</span>
+                      <span>{flightHoverInfo.flight.arrivalTime || ''}</span>
+                    </div>
+                    <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all"
+                        style={{ width: `${flightHoverInfo.progress * 100}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all"
-                      style={{ width: `${flightHoverInfo.progress * 100}%` }}
-                    />
+                ) : (
+                  <div className="mb-3 text-[10px] text-amber-400/60 text-center">
+                    Route may differ from scheduled
                   </div>
-                </div>
+                )}
 
                 {/* Flight details - only with route */}
                 {(flightHoverInfo.flight.aircraft || flightHoverInfo.flight.duration || flightHoverInfo.flight.distance) && (
