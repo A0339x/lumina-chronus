@@ -5,6 +5,7 @@ import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirpor
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, TRACKED_FLIGHTS } from '../services/flightService';
+import { LightningStrike, subscribeLightning, connectLightning, disconnectLightning } from '../services/lightningService';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
@@ -255,9 +256,11 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const [flightHoverInfo, setFlightHoverInfo] = useState<FlightHoverInfo | null>(null);
   const [isFlightTooltipVisible, setIsFlightTooltipVisible] = useState(false);
   const [liveFlights, setLiveFlights] = useState<Map<string, FlightInfo>>(new Map());
+  const [lightningStrikes, setLightningStrikes] = useState<LightningStrike[]>([]);
   const flightProgressRef = useRef(0);
   const planePositionRef = useRef<{ x: number; y: number; bearing: number } | null>(null);
   const liveFlightsRef = useRef<Map<string, FlightInfo>>(new Map());
+  const lightningStrikesRef = useRef<LightningStrike[]>([]);
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track newest timezone for celebration effect (using refs to avoid restarting animation loop)
@@ -428,6 +431,19 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     // Refresh flight data every 10 seconds (OpenSky rate limit)
     const interval = setInterval(loadFlights, 10 * 1000);
     return () => clearInterval(interval);
+  }, []);
+
+  // Connect to lightning WebSocket
+  useEffect(() => {
+    connectLightning();
+    const unsubscribe = subscribeLightning((strikes) => {
+      setLightningStrikes(strikes);
+      lightningStrikesRef.current = strikes;
+    });
+    return () => {
+      unsubscribe();
+      disconnectLightning();
+    };
   }, []);
 
   // Update flight tooltip when live data changes (so numbers update while hovering)
@@ -885,6 +901,56 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           p.draw(ctx);
         } else {
           particles.splice(i, 1);
+        }
+      }
+
+      // Draw lightning strikes
+      const currentStrikes = lightningStrikesRef.current;
+      for (const strike of currentStrikes) {
+        const strikePos = latLngToCanvas(strike.lat, strike.lon);
+        const ageRatio = strike.age / 60000; // 0 to 1 over 60 seconds
+        const alpha = Math.max(0, 1 - ageRatio); // Fade out over time
+
+        if (alpha > 0) {
+          ctx.save();
+          ctx.translate(strikePos.x, strikePos.y);
+
+          // Flash effect - bright burst that fades quickly
+          const flashAlpha = strike.age < 500 ? (1 - strike.age / 500) * 0.8 : 0;
+          if (flashAlpha > 0) {
+            ctx.beginPath();
+            ctx.arc(0, 0, 20 + (1 - flashAlpha) * 30, 0, Math.PI * 2);
+            ctx.fillStyle = `rgba(255, 255, 255, ${flashAlpha * 0.5})`;
+            ctx.fill();
+          }
+
+          // Lightning bolt icon
+          ctx.globalAlpha = alpha;
+          ctx.strokeStyle = '#ffff00';
+          ctx.fillStyle = '#ffff00';
+          ctx.shadowBlur = 15;
+          ctx.shadowColor = '#ffff00';
+          ctx.lineWidth = 2;
+
+          // Simple bolt shape
+          ctx.beginPath();
+          ctx.moveTo(2, -8);
+          ctx.lineTo(-2, -2);
+          ctx.lineTo(1, -2);
+          ctx.lineTo(-3, 8);
+          ctx.lineTo(1, 0);
+          ctx.lineTo(-1, 0);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          // Small glow circle
+          ctx.beginPath();
+          ctx.arc(0, 0, 4 + (1 - ageRatio) * 3, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(255, 255, 100, ${alpha * 0.3})`;
+          ctx.fill();
+
+          ctx.restore();
         }
       }
 
