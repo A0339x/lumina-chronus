@@ -212,6 +212,9 @@ function estimateTemp(lat: number): number {
 }
 
 // ============ FLIGHT HANDLING ============
+// Uses Cache API for hot path (10s TTL), KV for persistent backup (1h)
+
+const FLIGHT_CACHE_URL = 'https://lumina-chronos.internal/flights';
 
 async function handleFlights(env: Env, params: URLSearchParams): Promise<Response> {
   const callsigns = params.get('callsigns')?.split(',').filter(Boolean) || [];
@@ -220,34 +223,65 @@ async function handleFlights(env: Env, params: URLSearchParams): Promise<Respons
     return jsonResponse({ error: 'No callsigns provided' }, 400);
   }
 
-  const now = Date.now();
+  const cache = caches.default;
+  const cacheKey = new Request(FLIGHT_CACHE_URL);
 
-  // Get cached flight positions (last known)
-  const cached = await env.WEATHER_CACHE.get(FLIGHT_CACHE_KEY, 'json') as FlightCache | null;
+  // 1. Try Cache API first (edge cache, very fast)
+  const cachedResponse = await cache.match(cacheKey);
+  if (cachedResponse) {
+    const data = await cachedResponse.json() as FlightCache;
+    const age = Date.now() - new Date(data.updatedAt).getTime();
+
+    // If fresh (< 10 seconds), return immediately
+    if (age < 10000) {
+      const relevantFlights = filterFlights(data.positions, callsigns);
+      return jsonResponse({ flights: relevantFlights, source: 'edge-cache', age: Math.round(age / 1000) });
+    }
+  }
+
+  // 2. Cache is stale or missing - fetch fresh data
   const rateLimits = await getRateLimits(env);
-
-  // Check if we can fetch fresh data
+  const now = Date.now();
   const canFetch = (now - rateLimits.flightLastFetch > 5000) && (rateLimits.flightErrors < 5);
 
   if (canFetch) {
-    const fresh = await fetchFlightPositions(env, callsigns, rateLimits, cached);
+    // Get KV backup for existing positions
+    const kvBackup = await env.WEATHER_CACHE.get(FLIGHT_CACHE_KEY, 'json') as FlightCache | null;
+    const fresh = await fetchFlightPositions(env, callsigns, rateLimits, kvBackup);
+
     if (fresh) {
-      return jsonResponse({ flights: fresh.positions, source: 'fresh' });
+      // Store in Cache API (10 second TTL for hot path)
+      const cacheResponse = new Response(JSON.stringify(fresh), {
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'max-age=10', // 10 seconds
+        },
+      });
+      await cache.put(cacheKey, cacheResponse);
+
+      const relevantFlights = filterFlights(fresh.positions, callsigns);
+      return jsonResponse({ flights: relevantFlights, source: 'fresh' });
     }
   }
 
-  // Return cached positions (last known)
-  if (cached?.positions) {
-    const relevantFlights: Record<string, FlightPosition> = {};
-    for (const cs of callsigns) {
-      if (cached.positions[cs]) {
-        relevantFlights[cs] = cached.positions[cs];
-      }
-    }
-    return jsonResponse({ flights: relevantFlights, source: 'cached' });
+  // 3. Fallback to KV backup
+  const kvBackup = await env.WEATHER_CACHE.get(FLIGHT_CACHE_KEY, 'json') as FlightCache | null;
+  if (kvBackup?.positions) {
+    const relevantFlights = filterFlights(kvBackup.positions, callsigns);
+    return jsonResponse({ flights: relevantFlights, source: 'kv-backup' });
   }
 
   return jsonResponse({ flights: {}, source: 'none' });
+}
+
+function filterFlights(positions: Record<string, FlightPosition>, callsigns: string[]): Record<string, FlightPosition> {
+  const result: Record<string, FlightPosition> = {};
+  for (const cs of callsigns) {
+    if (positions[cs]) {
+      result[cs] = positions[cs];
+    }
+  }
+  return result;
 }
 
 async function fetchFlightPositions(
