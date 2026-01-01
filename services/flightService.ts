@@ -52,6 +52,11 @@ let flightCache: Map<string, FlightInfo> = new Map();
 let lastFetchTime = 0;
 const CACHE_TTL = 10000; // 10 seconds (OpenSky rate limit for anonymous users)
 
+// Rate limit backoff handling
+let backoffUntil = 0;
+let consecutiveErrors = 0;
+const MAX_BACKOFF = 300000; // 5 minutes max backoff
+
 // Parse OpenSky state vector into FlightPosition
 function parseStateVector(state: any[]): FlightPosition | null {
   if (!state || state.length < 17) return null;
@@ -94,6 +99,11 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
     return flightCache;
   }
 
+  // Check if we're in backoff mode due to rate limiting
+  if (now < backoffUntil) {
+    return flightCache; // Return stale cache during backoff
+  }
+
   try {
     // Query a bounding box covering North America to Mexico
     // This covers the Montreal to Puerto Vallarta route
@@ -102,9 +112,18 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
     );
 
     if (!response.ok) {
-      console.warn('OpenSky API error:', response.status);
+      // Handle rate limiting with exponential backoff
+      if (response.status === 429) {
+        consecutiveErrors++;
+        const backoffTime = Math.min(CACHE_TTL * Math.pow(2, consecutiveErrors), MAX_BACKOFF);
+        backoffUntil = now + backoffTime;
+        // Silent - don't spam console
+      }
       return flightCache; // Return stale cache on error
     }
+
+    // Success - reset error counter
+    consecutiveErrors = 0;
 
     const data = await response.json();
 

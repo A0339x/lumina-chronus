@@ -23,13 +23,24 @@ export const fetchWeather = async (lat: number, lng: number): Promise<WeatherDat
     const response = await fetch(
       `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current_weather=true`
     );
+
+    // Handle rate limiting and other errors
+    if (!response.ok) {
+      throw new Error(`API error: ${response.status}`);
+    }
+
     const data = await response.json();
+
+    if (!data.current_weather) {
+      throw new Error('No weather data in response');
+    }
+
     return {
       temperature: data.current_weather.temperature,
       condition: "Unknown", // OpenMeteo weather codes are numeric, ignoring for this specific UI
     };
   } catch (error) {
-    console.error("Failed to fetch weather", error);
+    // Silent fallback - don't spam console
     // Fallback based on latitude (Rough estimation)
     const isNorthernHemisphere = lat > 0;
     // Assume January (Winter North, Summer South)

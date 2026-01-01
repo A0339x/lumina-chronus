@@ -58,6 +58,11 @@ const App: React.FC = () => {
   const updateTimer = useCallback(() => {
     if (!state) return;
 
+    // Don't keep running transitions if all timezones have celebrated
+    if (haveAllTimezonesCelebrated()) {
+      return;
+    }
+
     const now = new Date();
     const diff = state.targetDate.getTime() - now.getTime();
 
