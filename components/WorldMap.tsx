@@ -612,12 +612,16 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       const airports = getAirports();
 
       if (allCelebratedRef.current) {
-        // After all celebrated: spawn at any airport worldwide
-        if (Math.random() > 0.92) { // ~8% chance per frame = steady gentle rate
-          const airport = airports[Math.floor(Math.random() * airports.length)];
-          const { x, y } = latLngToCanvas(airport.lat, airport.lng);
-          const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
-          particles.push(new Particle(x, y, sparkleColor, false, 0));
+        // After all celebrated: spawn at multiple airports worldwide
+        // Spawn 2-3 sparkles per frame to keep ~50-80 visible across 292 airports
+        const spawnCount = Math.random() > 0.5 ? 3 : 2;
+        for (let i = 0; i < spawnCount; i++) {
+          if (Math.random() > 0.7) { // 30% chance each
+            const airport = airports[Math.floor(Math.random() * airports.length)];
+            const { x, y } = latLngToCanvas(airport.lat, airport.lng);
+            const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
+            particles.push(new Particle(x, y, sparkleColor, false, 0));
+          }
         }
       } else {
         // During countdown: only spawn at airports in past timezones
