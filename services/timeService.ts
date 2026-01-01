@@ -36,20 +36,25 @@ export const getNextMidnightTimezone = (): { timezone: TimezoneData; targetDate:
 
 /**
  * Returns a list of timezones where it is already New Year (past 00:00 Jan 1st).
- * Since this is a generic app, we assume "New Year" means the local time is 
- * in the early morning (00:00 - 12:00) of the "next" day compared to the user, 
+ * Since this is a generic app, we assume "New Year" means the local time is
+ * in the early morning (00:00 - 12:00) of the "next" day compared to the user,
  * or simply if their local time hours are < 12 and it's a new day cycle.
- * 
+ *
  * Simplified logic for this demo:
- * We look at the getNextMidnightTimezone. Any timezone with an offset > nextMidnight.offset 
+ * We look at the getNextMidnightTimezone. Any timezone with an offset > nextMidnight.offset
  * has likely already celebrated (moving East to West).
  */
 export const getPastTimezones = (): TimezoneData[] => {
+    // If all have celebrated, return all timezones
+    if (haveAllTimezonesCelebrated()) {
+      return TIMEZONES;
+    }
+
     const next = getNextMidnightTimezone();
     // In the sequence of New Year, timezones with Higher offsets celebrate first.
     // e.g., +14 celebrates before +13.
     // If the "next" is +10, then +14, +13, +12, +11 have passed.
-    
+
     return TIMEZONES.filter(tz => tz.offset > next.timezone.offset);
 };
 
@@ -68,10 +73,25 @@ export const formatTimeRemaining = (ms: number) => {
 
 /**
  * Check if all timezones have celebrated New Year
- * This happens when the last timezone (UTC-11 or UTC-12) has passed midnight
+ * This happens when UTC-11 (last timezone) has passed midnight on Jan 1
+ * UTC-11 hits midnight at 11:00 UTC on January 1st
  */
 export const haveAllTimezonesCelebrated = (): boolean => {
-  const pastTimezones = getPastTimezones();
-  // All timezones have celebrated when pastTimezones includes ALL timezones
-  return pastTimezones.length === TIMEZONES.length;
+  const now = new Date();
+  const utcMonth = now.getUTCMonth(); // 0 = January
+  const utcDate = now.getUTCDate();
+  const utcHours = now.getUTCHours();
+
+  // If it's January 1st and past 11:00 UTC, all timezones have celebrated
+  // (UTC-11 hits midnight at 11:00 UTC on Jan 1)
+  if (utcMonth === 0 && utcDate === 1 && utcHours >= 11) {
+    return true;
+  }
+
+  // Also check January 2nd in case they're still viewing
+  if (utcMonth === 0 && utcDate === 2) {
+    return true;
+  }
+
+  return false;
 };
