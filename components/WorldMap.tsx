@@ -438,6 +438,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     };
 
     // Convert lat/lng to canvas coordinates matching the map's projection
+    // Note: Land mask stretches SVG to fill container, so we do the same here
     const latLngToCanvas = (lat: number, lng: number): { x: number; y: number } => {
       // Match the map's d3 geoEquirectangular projection
       const pixelsPerDegree = MAP_SCALE * (Math.PI / 180);
@@ -446,23 +447,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       const svgX = (SVG_WIDTH / 2) + (lng - MAP_CENTER_LNG) * pixelsPerDegree;
       const svgY = (SVG_HEIGHT / 2) - (lat - MAP_CENTER_LAT) * pixelsPerDegree;
 
-      // Convert SVG coords to canvas coords (accounting for aspect ratio)
-      const containerAspect = canvas.width / canvas.height;
-
-      let canvasX, canvasY;
-      if (containerAspect > SVG_ASPECT) {
-        // Container wider - SVG fitted to height
-        const scale = canvas.height / SVG_HEIGHT;
-        const offsetX = (canvas.width - SVG_WIDTH * scale) / 2;
-        canvasX = offsetX + svgX * scale;
-        canvasY = svgY * scale;
-      } else {
-        // Container taller - SVG fitted to width
-        const scale = canvas.width / SVG_WIDTH;
-        const offsetY = (canvas.height - SVG_HEIGHT * scale) / 2;
-        canvasX = svgX * scale;
-        canvasY = offsetY + svgY * scale;
-      }
+      // Stretch SVG coords to canvas coords (matching land mask which stretches to fill)
+      const canvasX = (svgX / SVG_WIDTH) * canvas.width;
+      const canvasY = (svgY / SVG_HEIGHT) * canvas.height;
 
       return { x: canvasX, y: canvasY };
     };
