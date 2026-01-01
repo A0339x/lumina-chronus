@@ -4,7 +4,7 @@ import { FireworkEvent, TimezoneData } from '../types';
 import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportCondition, WeatherCondition, WeatherIntensity } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
-import { fetchFlightData, calculateFlightProgress, FlightInfo, TRACKED_FLIGHTS } from '../services/flightService';
+import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, TRACKED_FLIGHTS } from '../services/flightService';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
@@ -1256,9 +1256,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
               </div>
             </div>
 
-            {/* Live flight data (altitude, speed) */}
+            {/* Live flight data (altitude, speed, distance flown) */}
             {flightHoverInfo.flight.position && (
-              <div className="grid grid-cols-2 gap-2 text-center border-t border-cyan-400/20 pt-2 mb-3">
+              <div className="grid grid-cols-3 gap-2 text-center border-t border-cyan-400/20 pt-2 mb-3">
                 <div>
                   <p className="text-[10px] text-cyan-400/60 uppercase">Altitude</p>
                   <p className="text-cyan-300 text-xs font-medium">
@@ -1266,9 +1266,15 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                   </p>
                 </div>
                 <div>
-                  <p className="text-[10px] text-cyan-400/60 uppercase">Ground Speed</p>
+                  <p className="text-[10px] text-cyan-400/60 uppercase">Speed</p>
                   <p className="text-cyan-300 text-xs font-medium">
                     {Math.round(flightHoverInfo.flight.position.velocity * 1.944)} kts
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-cyan-400/60 uppercase">Flown</p>
+                  <p className="text-cyan-300 text-xs font-medium">
+                    {Math.round(calculateDistanceFlown(flightHoverInfo.flight)).toLocaleString()} km
                   </p>
                 </div>
               </div>

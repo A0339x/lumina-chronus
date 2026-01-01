@@ -206,7 +206,7 @@ export function calculateFlightProgress(flight: FlightInfo): number {
   return Math.min(1, Math.max(0, distFromOrigin / totalDist));
 }
 
-// Haversine formula for distance between two points
+// Haversine formula for distance between two points (returns km)
 function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -217,6 +217,18 @@ function haversineDistance(lat1: number, lng1: number, lat2: number, lng2: numbe
     Math.sin(dLng / 2) * Math.sin(dLng / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// Calculate distance flown in km
+export function calculateDistanceFlown(flight: FlightInfo): number {
+  if (!flight.position || flight.status !== 'In Flight') {
+    return 0;
+  }
+
+  return haversineDistance(
+    flight.origin.lat, flight.origin.lng,
+    flight.position.latitude, flight.position.longitude
+  );
 }
 
 // List of flights we want to track
