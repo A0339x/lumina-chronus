@@ -555,12 +555,53 @@ const AIRPORTS: Airport[] = [
   { icao: "PHLH", lat: 21.98, lng: -159.34, name: "Lihue" },
 ];
 
-// Hardcoded temperatures and weather conditions - auto-updated by GitHub Actions
-// Last updated: 2026-01-01T16:21:42.090Z
-// Coverage: 476 airports, 22 with active weather
-type WeatherCondition = "thunderstorm" | "snow" | "rain" | "fog" | "freezing" | null;
-type WeatherIntensity = "light" | "moderate" | "heavy" | null;
+// Dynamic weather cache - fetched from Cloudflare Worker
 interface AirportWeather { temp: number; condition: WeatherCondition; intensity: WeatherIntensity; }
+
+// Weather cache - populated from Worker API
+let weatherCache: Map<string, AirportWeather> = new Map();
+let lastWeatherFetch = 0;
+let weatherFetchInProgress = false;
+const WEATHER_CACHE_TTL = 600000; // 10 minutes
+
+// Fetch weather data from our Cloudflare Worker
+async function refreshWeatherCache(): Promise<void> {
+  if (weatherFetchInProgress) return;
+
+  const now = Date.now();
+  if (now - lastWeatherFetch < 60000) return; // Don't fetch more than once per minute
+
+  weatherFetchInProgress = true;
+
+  try {
+    const response = await fetch('/api/data?type=weather');
+    if (!response.ok) throw new Error(`Weather API error: ${response.status}`);
+
+    const data = await response.json() as { airports: Record<string, { temp: number; condition: string | null }> };
+
+    if (data.airports) {
+      for (const [icao, weather] of Object.entries(data.airports)) {
+        weatherCache.set(icao, {
+          temp: weather.temp,
+          condition: weather.condition as WeatherCondition,
+          intensity: null,
+        });
+      }
+      lastWeatherFetch = now;
+    }
+  } catch (error) {
+    console.error('Failed to fetch weather:', error);
+  } finally {
+    weatherFetchInProgress = false;
+  }
+}
+
+// Initialize weather fetch on load
+if (typeof window !== 'undefined') {
+  refreshWeatherCache();
+  // Refresh every 10 minutes
+  setInterval(refreshWeatherCache, WEATHER_CACHE_TTL);
+}
 const HARDCODED_WEATHER: Record<string, AirportWeather> = {
   "KATL":{temp:10,condition:null,intensity:null},"KLAX":{temp:16,condition:null,intensity:null},"KORD":{temp:-10,condition:null,intensity:null},"KDFW":{temp:12,condition:null,intensity:null},"KDEN":{temp:10,condition:null,intensity:null},"KJFK":{temp:-3,condition:null,intensity:null},"KSFO":{temp:11,condition:null,intensity:null},"KSEA":{temp:1,condition:null,intensity:null},"KLAS":{temp:8,condition:null,intensity:null},"KMCO":{temp:15,condition:null,intensity:null},
   "KEWR":{temp:-3,condition:null,intensity:null},"KMIA":{temp:17,condition:null,intensity:null},"KPHX":{temp:15,condition:null,intensity:null},"KIAH":{temp:15,condition:null,intensity:null},"KBOS":{temp:-4,condition:null,intensity:null},"KMSP":{temp:-13,condition:null,intensity:null},"KFLL":{temp:17,condition:null,intensity:null},"KDTW":{temp:-8,condition:null,intensity:null},"KPHL":{temp:-2,condition:null,intensity:null},"KLGA":{temp:-3,condition:null,intensity:null},
@@ -612,8 +653,13 @@ const HARDCODED_WEATHER: Record<string, AirportWeather> = {
   "NIUE":{temp:27,condition:null,intensity:null},"PGSN":{temp:27,condition:null,intensity:null},"PGUM":{temp:27,condition:null,intensity:null},"PHOG":{temp:23,condition:null,intensity:null},"PHKO":{temp:26,condition:null,intensity:null},"PHLH":{temp:20,condition:null,intensity:null},
 };
 
-// Convert to Map for faster lookups
-const WEATHER_MAP = new Map(Object.entries(HARDCODED_WEATHER));
+// Fallback map from hardcoded data (used until Worker responds)
+const FALLBACK_WEATHER = new Map(Object.entries(HARDCODED_WEATHER));
+
+// Get weather for an airport - checks dynamic cache first, then fallback
+function getWeather(icao: string): AirportWeather | undefined {
+  return weatherCache.get(icao) || FALLBACK_WEATHER.get(icao);
+}
 
 // Haversine distance approximation (returns degrees for simplicity)
 function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -637,7 +683,7 @@ export function getNearestAirportTemp(lat: number, lng: number): NearestAirportI
 
   if (!nearest) return null;
 
-  const weather = WEATHER_MAP.get(nearest.icao);
+  const weather = getWeather(nearest.icao);
   if (weather === undefined) {
     // No weather data for this airport, estimate based on latitude and season
     const month = new Date().getMonth();
@@ -670,19 +716,19 @@ export function getAllAirports(): Airport[] {
 
 // Get temperature for a specific airport
 export function getAirportTemp(icao: string): number | null {
-  const weather = WEATHER_MAP.get(icao);
+  const weather = getWeather(icao);
   return weather?.temp ?? null;
 }
 
 // Get weather condition for a specific airport
 export function getAirportCondition(icao: string): WeatherCondition {
-  const weather = WEATHER_MAP.get(icao);
+  const weather = getWeather(icao);
   return weather?.condition ?? null;
 }
 
 // Get weather intensity for a specific airport
 export function getAirportIntensity(icao: string): WeatherIntensity {
-  const weather = WEATHER_MAP.get(icao);
+  const weather = getWeather(icao);
   return weather?.intensity ?? null;
 }
 

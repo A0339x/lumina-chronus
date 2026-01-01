@@ -94,21 +94,10 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
     const data = await response.json() as { flights: Record<string, any> };
 
     if (!data.flights || Object.keys(data.flights).length === 0) {
-      // No flights found - mark tracked ones as unknown
-      const newCache = new Map<string, FlightInfo>();
-      for (const callsign of callsigns) {
-        const knownInfo = KNOWN_FLIGHTS[callsign];
-        if (knownInfo) {
-          newCache.set(callsign, {
-            ...knownInfo,
-            status: 'Unknown',
-            position: null,
-          });
-        }
-      }
-      flightCache = newCache;
+      // No new data - preserve last known positions from cache
+      // This prevents the plane from snapping back to origin
       lastFetchTime = now;
-      return flightCache;
+      return flightCache; // Keep showing last known positions
     }
 
     // Process flights returned by Worker
@@ -154,16 +143,23 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
       }
     }
 
-    // For tracked flights not found in the air, mark as unknown/scheduled
+    // For tracked flights not found in new data, preserve last known position
     for (const callsign of callsigns) {
       if (!newCache.has(callsign)) {
-        const knownInfo = KNOWN_FLIGHTS[callsign];
-        if (knownInfo) {
-          newCache.set(callsign, {
-            ...knownInfo,
-            status: 'Unknown',
-            position: null,
-          });
+        const cached = flightCache.get(callsign);
+        if (cached?.position) {
+          // Keep last known position - plane stays where it was
+          newCache.set(callsign, cached);
+        } else {
+          // No previous position, show as unknown
+          const knownInfo = KNOWN_FLIGHTS[callsign];
+          if (knownInfo) {
+            newCache.set(callsign, {
+              ...knownInfo,
+              status: 'Unknown',
+              position: null,
+            });
+          }
         }
       }
     }
