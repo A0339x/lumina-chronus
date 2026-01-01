@@ -147,6 +147,23 @@ async function refreshWeather(env: Env, rateLimits: RateLimits): Promise<Weather
   }
 }
 
+// WMO Weather Codes to our condition types
+// See: https://open-meteo.com/en/docs
+function parseWeatherCode(code: number): string | null {
+  // Thunderstorm (95-99)
+  if (code >= 95) return 'thunderstorm';
+  // Snow showers (85-86) or snow fall (71-77)
+  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'snow';
+  // Freezing rain/drizzle (56-57, 66-67)
+  if ((code >= 56 && code <= 57) || (code >= 66 && code <= 67)) return 'freezing';
+  // Rain (61-65) or rain showers (80-82) or drizzle (51-55)
+  if ((code >= 61 && code <= 65) || (code >= 80 && code <= 82) || (code >= 51 && code <= 55)) return 'rain';
+  // Fog (45-48)
+  if (code >= 45 && code <= 48) return 'fog';
+  // Clear/cloudy - no significant weather
+  return null;
+}
+
 async function fetchAllAirportWeather(): Promise<WeatherData> {
   const airports: Record<string, AirportWeather> = {};
 
@@ -169,9 +186,10 @@ async function fetchAllAirportWeather(): Promise<WeatherData> {
         const results = Array.isArray(data) ? data : [data];
         results.forEach((d: any, idx: number) => {
           if (d?.current_weather && batch[idx]) {
+            const weatherCode = d.current_weather.weathercode ?? 0;
             airports[batch[idx].icao] = {
               temp: Math.round(d.current_weather.temperature),
-              condition: null,
+              condition: parseWeatherCode(weatherCode),
             };
           }
         });
