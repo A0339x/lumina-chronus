@@ -643,26 +643,24 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         }
       };
 
-      // When all timezones have celebrated, sparkle the entire globe
+      // When all timezones have celebrated, sparkle the entire globe (same calm rate as countdown)
       if (allCelebratedRef.current) {
-        // Generate random sparkles across the globe
-        for (let i = 0; i < 3; i++) {
-          if (Math.random() > 0.7) {
-            const sparkLng = Math.random() * 360 - 180;
-            const sparkLat = Math.random() * 130 - 60;
-            const { x, y } = latLngToCanvas(sparkLat, sparkLng);
-            if (landMask) {
-              addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
-            } else {
-              const sparkleColor = getTemperatureColor(sparkLat, sparkLng);
-              particles.push(new Particle(x, y, sparkleColor, false, 0));
-            }
+        // Generate occasional random sparkles across the globe - sparse like during countdown
+        if (Math.random() > 0.92) {
+          const sparkLng = Math.random() * 360 - 180;
+          const sparkLat = Math.random() * 130 - 60;
+          const { x, y } = latLngToCanvas(sparkLat, sparkLng);
+          if (landMask) {
+            addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
+          } else {
+            const sparkleColor = getTemperatureColor(sparkLat, sparkLng);
+            particles.push(new Particle(x, y, sparkleColor, false, 0));
           }
         }
 
         // Also spawn sparkles at airport locations to ensure small landmasses get coverage
         const airports = getAirports();
-        if (Math.random() > 0.85) {
+        if (Math.random() > 0.95) {
           const airport = airports[Math.floor(Math.random() * airports.length)];
           const { x, y } = latLngToCanvas(airport.lat, airport.lng);
           const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
