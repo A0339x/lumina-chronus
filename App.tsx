@@ -38,13 +38,13 @@ const App: React.FC = () => {
     return localStorage.getItem('lumina-chronos-seen-hint') !== 'true';
   });
 
-  // Fade out the hint after a few seconds
+  // Fade out the hint after a while
   useEffect(() => {
     if (showInfoHint) {
       const timer = setTimeout(() => {
         setShowInfoHint(false);
         localStorage.setItem('lumina-chronos-seen-hint', 'true');
-      }, 6000);
+      }, 15000); // 15 seconds
       return () => clearTimeout(timer);
     }
   }, [showInfoHint]);
