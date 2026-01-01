@@ -251,16 +251,17 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     const airportInfo = getNearestAirportInfo(lat, lng);
 
     if (currentCountry) {
-      // Over land - show country + airport info
+      // Over land with country detected - show country + airport info
       setHoverInfo({
         country: currentCountry,
         airportInfo,
         x: event.clientX,
         y: event.clientY
       });
-    } else if (airportInfo && airportInfo.distance < 8) {
-      // Over ocean but near an airport (within ~8 degrees / ~800km)
-      // Show airport info without country
+    } else if (airportInfo && airportInfo.distance < 15) {
+      // No country detected but near an airport (within ~15 degrees / ~1500km)
+      // This catches land areas where country detection failed (Greenland gaps, small islands)
+      // as well as ocean areas near coasts
       if (fadeTimeoutRef.current) {
         clearTimeout(fadeTimeoutRef.current);
         fadeTimeoutRef.current = null;
