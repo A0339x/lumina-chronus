@@ -287,7 +287,7 @@ const AIRPORTS: Airport[] = [
 ];
 
 // Hardcoded temperatures - auto-updated every 6 hours by GitHub Actions
-// Last updated: 2026-01-01T10:47:00.684Z
+// Last updated: 2026-01-01T11:18:54.232Z
 const HARDCODED_TEMPS: Record<string, number> = {
   // UTC+14 to UTC+12 - Pacific Islands & New Zealand
   "NZAA": 19, "NZWN": 18, "NZCH": 14, "NFFN": 27, "UHPP": -3,
@@ -296,28 +296,28 @@ const HARDCODED_TEMPS: Record<string, number> = {
   "NVVV": 26, "AGGH": 28, "NWWW": 28, "UHMM": -16,
 
   // UTC+10 - Eastern Australia, Papua New Guinea
-  "YSSY": 16, "YMML": 15, "YBBN": 24, "AYPY": 15, "UHWW": -13, "PGUM": 28,
+  "YSSY": 15, "YMML": 14, "YBBN": 24, "AYPY": 15, "UHWW": -13, "PGUM": 28,
 
   // UTC+9:30 - Central Australia
   "YPAD": 20, "YPDN": 29,
 
   // UTC+9 - Japan, Korea
-  "RJTT": 7, "RJAA": 4, "RJBB": 8, "RKSI": -5, "RKSS": -8, "RKPK": -3, "RJCC": -11, "UEEE": -27,
+  "RJTT": 7, "RJAA": 4, "RJBB": 7, "RKSI": -5, "RKSS": -8, "RKPK": -3, "RJCC": -11, "UEEE": -27,
 
   // UTC+8 - China, Singapore, Philippines, Malaysia, Western Australia
-  "ZBAA": -3, "ZSPD": 5, "ZGGG": 14, "ZGSZ": 19, "VHHH": 20, "RCTP": 16, "WSSS": 28, "RPLL": 28, "WMKK": 28, "YPPH": 31, "ZMUB": -25, "UIII": -18,
+  "ZBAA": -3, "ZSPD": 5, "ZGGG": 14, "ZGSZ": 18, "VHHH": 19, "RCTP": 16, "WSSS": 27, "RPLL": 28, "WMKK": 28, "YPPH": 31, "ZMUB": -25, "UIII": -18,
 
   // UTC+7 - Thailand, Vietnam, Indonesia
-  "VTBS": 31, "VVNB": 21, "VVTS": 28, "WIII": 27, "UNNT": -8, "UNKL": -1,
+  "VTBS": 30, "VVNB": 21, "VVTS": 28, "WIII": 27, "UNNT": -8, "UNKL": -1,
 
   // UTC+6:30 - Myanmar
   "VYYY": 28,
 
   // UTC+6 - Bangladesh, Central Asia
-  "VGHS": 20, "UAAA": 1, "UACC": -8, "UTTT": 5, "UNOO": -12,
+  "VGHS": 19, "UAAA": 1, "UACC": -9, "UTTT": 5, "UNOO": -13,
 
   // UTC+5:45 - Nepal
-  "VNKT": 16,
+  "VNKT": 15,
 
   // UTC+5:30 - India, Sri Lanka
   "VIDP": 16, "VABB": 25, "VOBL": 27, "VECC": 21, "VOMM": 26, "VCBI": 27,
@@ -329,7 +329,7 @@ const HARDCODED_TEMPS: Record<string, number> = {
   "OAKB": 6,
 
   // UTC+4 - UAE, Gulf, Caucasus
-  "OMDB": 22, "OMAA": 22, "OOMS": 25, "UBBB": 6, "UGGG": 5, "UDYZ": 0, "FIMP": 27, "FMEE": 28,
+  "OMDB": 22, "OMAA": 22, "OOMS": 24, "UBBB": 6, "UGGG": 5, "UDYZ": 0, "FIMP": 26, "FMEE": 28,
 
   // UTC+3:30 - Iran
   "OIIE": 9, "OIMM": 11,
@@ -338,37 +338,37 @@ const HARDCODED_TEMPS: Record<string, number> = {
   "UUEE": -10, "UUDD": -10, "ULLI": -7, "LTFM": 2, "OERK": 23, "OEJN": 29, "ORBI": 17, "OTHH": 21, "OKBK": 21, "HKJK": 23, "HAAB": 23, "HTDA": 30, "FMMI": 25,
 
   // UTC+2 - Eastern Europe, Southern Africa
-  "HECA": 20, "LGAV": 6, "LLBG": 16, "UKBB": -9, "LROP": -1, "EFHK": -13, "LBSF": -2, "FAOR": 26, "FACT": 27, "FVHA": 26,
+  "HECA": 20, "LGAV": 6, "LLBG": 16, "UKBB": -9, "LROP": -1, "EFHK": -13, "LBSF": -1, "FAOR": 26, "FACT": 27, "FVHA": 27,
 
   // UTC+1 - Central Europe, West Africa
-  "LFPG": 2, "EDDF": 2, "EDDM": -1, "LIRF": 9, "LEMD": 3, "LEBL": 10, "EHAM": 6, "EBBR": 3, "LOWW": 4, "EPWA": 0, "LKPR": 0, "LHBP": 2, "ESSA": 0, "EKCH": 4, "ENGM": -1, "LSZH": -3, "DNMM": 31, "DAAG": 15, "DTTA": 15,
+  "LFPG": 2, "EDDF": 2, "EDDM": 0, "LIRF": 10, "LEMD": 3, "LEBL": 11, "EHAM": 6, "EBBR": 4, "LOWW": 4, "EPWA": 0, "LKPR": 0, "LHBP": 3, "ESSA": 1, "EKCH": 4, "ENGM": -1, "LSZH": -1, "DNMM": 31, "DAAG": 15, "DTTA": 15,
 
   // UTC+0 - UK, Portugal, West Africa
-  "EGLL": 3, "EGKK": 3, "EIDW": 4, "LPPT": 11, "BIKF": 4, "DGAA": 30, "GOBD": 27, "GMMN": 18,
+  "EGLL": 4, "EGKK": 3, "EIDW": 4, "LPPT": 11, "BIKF": 4, "DGAA": 31, "GOBD": 29, "GMMN": 19,
 
   // UTC-1 - Cape Verde, Azores
-  "GVNP": 27, "LPAZ": 16,
+  "GVNP": 28, "LPAZ": 16,
 
   // UTC-3 - Brazil, Argentina
-  "SBGR": 25, "SBGL": 29, "SBBR": 22, "SAEZ": 19, "SUMU": 23, "SCEL": 20, "SLLP": 5, "SGAS": 25,
+  "SBGR": 25, "SBGL": 30, "SBBR": 24, "SAEZ": 20, "SUMU": 24, "SCEL": 22, "SLLP": 6, "SGAS": 25,
 
   // UTC-3:30 - Newfoundland
   "CYYT": 2,
 
   // UTC-4 - Atlantic Canada, Caribbean
-  "CYHZ": -3, "TJSJ": 19, "MDSD": 24, "SVMI": 28, "SBBV": 25,
+  "CYHZ": -3, "TJSJ": 19, "MDSD": 24, "SVMI": 28, "SBBV": 26,
 
   // UTC-5 - Eastern US/Canada, Colombia, Peru
-  "KJFK": 2, "KLGA": 0, "KEWR": 0, "KORD": -11, "KATL": 1, "KMIA": 7, "KBOS": -1, "KDCA": 1, "KIAD": -1, "KPHL": 1, "KDTW": -12, "CYYZ": -15, "CYUL": -11, "CYOW": -15, "SKBO": 10, "SPJC": 18, "SEQM": 10, "MUHA": 16, "MKJP": 23, "MPTO": 26,
+  "KJFK": 2, "KLGA": -2, "KEWR": -2, "KORD": -11, "KATL": 1, "KMIA": 7, "KBOS": -1, "KDCA": 0, "KIAD": -2, "KPHL": 0, "KDTW": -12, "CYYZ": -15, "CYUL": -13, "CYOW": -15, "SKBO": 10, "SPJC": 18, "SEQM": 10, "MUHA": 16, "MKJP": 23, "MPTO": 26,
 
   // UTC-6 - Central US, Mexico, Central America
-  "KDFW": 7, "KIAH": 6, "KAUS": 7, "KMSP": -15, "KSTL": -2, "KMSY": 4, "CYWG": -20, "MMMX": 8, "MMUN": 15, "MGGT": 13, "MHTG": 19, "MSSS": 23, "MNMG": 23, "MROC": 22,
+  "KDFW": 6, "KIAH": 5, "KAUS": 7, "KMSP": -14, "KSTL": -2, "KMSY": 4, "CYWG": -19, "MMMX": 8, "MMUN": 15, "MGGT": 13, "MHTG": 19, "MSSS": 22, "MNMG": 23, "MROC": 22,
 
   // UTC-7 - Mountain US/Canada, Mexico
-  "KDEN": 5, "KPHX": 15, "KSLC": -1, "KABQ": 4, "KELP": 10, "KBOI": -3, "CYYC": -6, "CYEG": -7, "MMCU": 10, "MMHO": 18,
+  "KDEN": 4, "KPHX": 14, "KSLC": -1, "KABQ": 4, "KELP": 10, "KBOI": -2, "CYYC": -6, "CYEG": -8, "MMCU": 10, "MMHO": 18,
 
   // UTC-8 - Pacific US/Canada
-  "KLAX": 14, "KSFO": 11, "KSEA": 2, "KSAN": 16, "KLAS": 8, "KPDX": 1, "CYVR": 3, "MMTJ": 16,
+  "KLAX": 14, "KSFO": 11, "KSEA": 2, "KSAN": 16, "KLAS": 8, "KPDX": 2, "CYVR": 3, "MMTJ": 16,
 
   // UTC-9 - Alaska
   "PANC": -9, "PAFA": -38, "PAJN": 1,
