@@ -986,23 +986,23 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       // Store plane position for hover detection
       planePositionRef.current = { x: planeCanvasPos.x, y: planeCanvasPos.y, bearing };
 
-      // Draw the full route as a dashed line
+      // Draw the full route as a subtle dashed line
       ctx.save();
-      ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = isLive ? 'rgba(255, 200, 50, 0.3)' : 'rgba(255, 200, 50, 0.15)';
-      ctx.lineWidth = 2;
+      ctx.setLineDash([3, 6]);
+      ctx.strokeStyle = isLive ? 'rgba(165, 180, 252, 0.25)' : 'rgba(165, 180, 252, 0.12)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.moveTo(originPos.x, originPos.y);
       ctx.lineTo(destPos.x, destPos.y);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw the traveled path as solid yellow line (only if in flight)
+      // Draw the traveled path as subtle gradient line (only if in flight)
       if (isLive) {
-        ctx.strokeStyle = '#ffc832';
-        ctx.lineWidth = 3;
-        ctx.shadowBlur = 8;
-        ctx.shadowColor = '#ffc832';
+        ctx.strokeStyle = 'rgba(199, 210, 254, 0.5)';
+        ctx.lineWidth = 1.5;
+        ctx.shadowBlur = 4;
+        ctx.shadowColor = 'rgba(165, 180, 252, 0.5)';
         ctx.beginPath();
         ctx.moveTo(originPos.x, originPos.y);
         ctx.lineTo(planeCanvasPos.x, planeCanvasPos.y);
@@ -1010,30 +1010,30 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         ctx.shadowBlur = 0;
       }
 
-      // Draw origin and destination markers
+      // Draw origin and destination markers (subtle)
       // Origin (Montreal)
-      ctx.fillStyle = '#ffc832';
+      ctx.fillStyle = 'rgba(199, 210, 254, 0.6)';
       ctx.beginPath();
-      ctx.arc(originPos.x, originPos.y, 4, 0, Math.PI * 2);
+      ctx.arc(originPos.x, originPos.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
       // Destination (Puerto Vallarta)
-      ctx.strokeStyle = '#ffc832';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(199, 210, 254, 0.5)';
+      ctx.lineWidth = 1;
       ctx.beginPath();
-      ctx.arc(destPos.x, destPos.y, 5, 0, Math.PI * 2);
+      ctx.arc(destPos.x, destPos.y, 3.5, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Draw the plane icon (brighter when live, dimmer when not in flight)
+      // Draw the plane icon (subtle, fits with design)
       ctx.save();
       ctx.translate(planeCanvasPos.x, planeCanvasPos.y);
       // Rotate to face direction of travel (bearing is from north, canvas rotation is from east)
       ctx.rotate((bearing - 90) * Math.PI / 180);
 
       // Draw plane shape (pointing right when rotation is 0)
-      const planeSize = 10;
-      ctx.fillStyle = isLive ? '#ffc832' : 'rgba(255, 200, 50, 0.5)';
-      ctx.shadowBlur = isLive ? 10 : 5;
+      const planeSize = 7;
+      ctx.fillStyle = isLive ? 'rgba(224, 231, 255, 0.9)' : 'rgba(165, 180, 252, 0.4)';
+      ctx.shadowBlur = isLive ? 6 : 3;
       ctx.shadowColor = '#ffc832';
 
       // Plane body
