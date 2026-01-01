@@ -510,17 +510,17 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           this.size = (Math.random() * 3 + 2) * (1 + celebrationIntensity * 0.5);
           this.maxAlpha = Math.min(1, (Math.random() * 0.5 + 0.5) * (1 + celebrationIntensity * 0.3));
           this.glowIntensity = 15 + celebrationIntensity * 10;
-          this.maxLife = 90 + Math.floor(Math.random() * 60);
+          this.maxLife = 120 + Math.floor(Math.random() * 80);
         } else {
-          // Normal sparkles
+          // Normal sparkles - gentle and slow
           this.size = Math.random() * 2 + 1;
-          this.maxAlpha = Math.random() * 0.7 + 0.3;
+          this.maxAlpha = Math.random() * 0.6 + 0.3;
           this.glowIntensity = 8;
-          this.maxLife = 60 + Math.floor(Math.random() * 90);
+          this.maxLife = 150 + Math.floor(Math.random() * 150); // Longer life: 150-300 frames
         }
 
         this.alpha = 0;
-        this.twinkleSpeed = Math.random() * 0.15 + 0.05;
+        this.twinkleSpeed = Math.random() * 0.03 + 0.015; // Much slower: 0.015-0.045
         this.twinklePhase = Math.random() * Math.PI * 2;
         this.pulsePhase = Math.random() * Math.PI * 2;
         this.life = 0;
@@ -584,12 +584,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           this.alpha = ((1 - lifeRatio) / 0.3) * this.maxAlpha;
         } else {
           this.twinklePhase += this.twinkleSpeed;
-          const twinkle = 0.6 + 0.4 * Math.sin(this.twinklePhase);
+          // Gentle twinkle: 0.75 to 1.0 (25% variation instead of 40%)
+          const twinkle = 0.75 + 0.25 * Math.sin(this.twinklePhase);
 
           if (this.isCelebration) {
             // Celebration particles pulse more dramatically
             this.pulsePhase += 0.1;
-            const pulse = 0.8 + 0.2 * Math.sin(this.pulsePhase * 3);
+            const pulse = 0.85 + 0.15 * Math.sin(this.pulsePhase * 3);
             this.alpha = this.maxAlpha * twinkle * pulse;
           } else {
             this.alpha = this.maxAlpha * twinkle;
