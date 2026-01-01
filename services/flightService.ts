@@ -143,23 +143,44 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
       }
     }
 
-    // For tracked flights not found in new data, preserve last known position
+    // For tracked flights not found in new data, check if they've landed
     for (const callsign of callsigns) {
       if (!newCache.has(callsign)) {
         const cached = flightCache.get(callsign);
-        if (cached?.position) {
-          // Keep last known position - plane stays where it was
-          newCache.set(callsign, cached);
-        } else {
-          // No previous position, show as unknown
-          const knownInfo = KNOWN_FLIGHTS[callsign];
-          if (knownInfo) {
+        const knownInfo = KNOWN_FLIGHTS[callsign];
+
+        if (cached?.position && knownInfo) {
+          // Check if last known position is close to destination (within ~50km)
+          const distToDestination = haversineDistance(
+            cached.position.latitude, cached.position.longitude,
+            knownInfo.destination.lat, knownInfo.destination.lng
+          );
+
+          if (distToDestination < 50 || cached.position.onGround) {
+            // Likely landed - show at destination
             newCache.set(callsign, {
               ...knownInfo,
-              status: 'Unknown',
-              position: null,
+              status: 'Landed',
+              position: {
+                ...cached.position,
+                latitude: knownInfo.destination.lat,
+                longitude: knownInfo.destination.lng,
+                altitude: 0,
+                velocity: 0,
+                onGround: true,
+              },
             });
+          } else {
+            // Still in transit or unknown - keep last known position
+            newCache.set(callsign, cached);
           }
+        } else if (knownInfo) {
+          // No previous position, show as scheduled (not yet departed)
+          newCache.set(callsign, {
+            ...knownInfo,
+            status: 'Scheduled',
+            position: null,
+          });
         }
       }
     }
