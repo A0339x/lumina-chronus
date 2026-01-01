@@ -1,8 +1,12 @@
 // Script to fetch live temperatures and update the hardcoded values
-// Run by GitHub Actions every 6 hours
+// Run by GitHub Actions every 30 minutes
 
-const fs = require('fs');
-const path = require('path');
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const AIRPORTS = [
   // UTC+14 to UTC+12 - Pacific Islands & New Zealand
