@@ -478,6 +478,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       y: number;
       color: string;
       size: number;
+      baseSize: number;
       alpha: number;
       maxAlpha: number;
       twinkleSpeed: number;
@@ -496,20 +497,21 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
         if (isCelebration) {
           // Celebration particles: larger, brighter, longer-lasting
-          this.size = (Math.random() * 3 + 2) * (1 + celebrationIntensity * 0.5);
+          this.baseSize = (Math.random() * 3 + 2) * (1 + celebrationIntensity * 0.5);
           this.maxAlpha = Math.min(1, (Math.random() * 0.5 + 0.5) * (1 + celebrationIntensity * 0.3));
           this.glowIntensity = 15 + celebrationIntensity * 10;
           this.maxLife = 120 + Math.floor(Math.random() * 80);
         } else {
-          // Normal sparkles - gentle and slow
-          this.size = Math.random() * 2 + 1;
-          this.maxAlpha = Math.random() * 0.6 + 0.3;
-          this.glowIntensity = 8;
-          this.maxLife = 150 + Math.floor(Math.random() * 150); // Longer life: 150-300 frames
+          // Normal sparkles - visible and animated
+          this.baseSize = Math.random() * 2.5 + 1.5; // Slightly larger: 1.5-4
+          this.maxAlpha = Math.random() * 0.5 + 0.5; // Brighter: 0.5-1.0
+          this.glowIntensity = 12; // More glow
+          this.maxLife = 150 + Math.floor(Math.random() * 150);
         }
 
+        this.size = this.baseSize;
         this.alpha = 0;
-        this.twinkleSpeed = Math.random() * 0.03 + 0.015; // Much slower: 0.015-0.045
+        this.twinkleSpeed = Math.random() * 0.12 + 0.06; // Faster: 0.06-0.18 for noticeable twinkling
         this.twinklePhase = Math.random() * Math.PI * 2;
         this.pulsePhase = Math.random() * Math.PI * 2;
         this.life = 0;
@@ -564,18 +566,24 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       update(): boolean {
         this.life++;
 
-        // Continuous twinkling - sparkles never fully fade out
+        // Continuous twinkling - more dramatic brightness variation
         this.twinklePhase += this.twinkleSpeed;
-        // Twinkle between 70% and 100% brightness
-        const twinkle = 0.7 + 0.3 * Math.sin(this.twinklePhase);
+        // Twinkle between 30% and 100% brightness for obvious animation
+        const twinkle = 0.3 + 0.7 * ((Math.sin(this.twinklePhase) + 1) / 2);
+
+        // Add secondary slower oscillation for more organic feel
+        const slowPulse = 0.8 + 0.2 * Math.sin(this.twinklePhase * 0.3);
 
         if (this.isCelebration) {
-          this.pulsePhase += 0.1;
-          const pulse = 0.85 + 0.15 * Math.sin(this.pulsePhase * 3);
+          this.pulsePhase += 0.15;
+          const pulse = 0.7 + 0.3 * Math.sin(this.pulsePhase * 3);
           this.alpha = this.maxAlpha * twinkle * pulse;
         } else {
-          this.alpha = this.maxAlpha * twinkle;
+          this.alpha = this.maxAlpha * twinkle * slowPulse;
         }
+
+        // Also vary the size for more dynamic effect (pulsing)
+        this.size = this.baseSize * (0.8 + 0.4 * ((Math.sin(this.twinklePhase * 0.7) + 1) / 2));
 
         // Always return true - sparkles never die, they respawn when needed
         return true;
