@@ -10,7 +10,7 @@ const TemperatureLegend: React.FC = () => {
   const colors = ['#b432ff', '#0096ff', '#00ffff', '#ffff00', '#ff3700'];
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center justify-center gap-2">
       {/* C/F Toggle */}
       <button
         onClick={toggleUnit}
