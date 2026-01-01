@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, memo, useState, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 import { FireworkEvent, TimezoneData } from '../types';
-import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo } from '../services/metarService';
+import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 
@@ -606,22 +606,30 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
       // When all timezones have celebrated, sparkle the entire globe
       if (allCelebrated) {
-        // Generate sparkles across all longitudes - don't require land mask
+        // Generate random sparkles across the globe
         for (let i = 0; i < 3; i++) {
           if (Math.random() > 0.7) {
-            const sparkLng = Math.random() * 360 - 180; // Full longitude range
+            const sparkLng = Math.random() * 360 - 180;
             const sparkLat = Math.random() * 130 - 60;
             const x = (sparkLng + 180) * (canvas.width / 360);
             const y = ((-1 * sparkLat) + 90) * (canvas.height / 180);
-            // Try land check, but if mask isn't ready, show anyway
             if (landMask) {
               addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
             } else {
-              // No land mask yet - just add sparkle
               const sparkleColor = getTemperatureColor(sparkLat, sparkLng);
               particles.push(new Particle(x, y, sparkleColor, false, 0));
             }
           }
+        }
+
+        // Also spawn sparkles at airport locations to ensure small landmasses get coverage
+        const airports = getAirports();
+        if (Math.random() > 0.85) {
+          const airport = airports[Math.floor(Math.random() * airports.length)];
+          const x = (airport.lng + 180) * (canvas.width / 360);
+          const y = ((-1 * airport.lat) + 90) * (canvas.height / 180);
+          const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
+          particles.push(new Particle(x, y, sparkleColor, false, 0));
         }
       } else {
         // For each past timezone, generate sparkles in vertical bands on land
@@ -629,6 +637,24 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           const isCelebrating = tz.offset === celebratingOffset && currentIntensity > 0;
           generateSparklesForOffset(tz.offset, isCelebrating);
         });
+
+        // Also spawn sparkles at airports in past timezones (ensures small landmasses get coverage)
+        const airports = getAirports();
+        const pastOffsets = new Set(pastTimezones.map(tz => tz.offset));
+        if (Math.random() > 0.9) {
+          // Find airports roughly in past timezone longitudes
+          const eligibleAirports = airports.filter(ap => {
+            const approxOffset = Math.round(ap.lng / 15);
+            return pastOffsets.has(approxOffset) || pastOffsets.has(approxOffset + 1) || pastOffsets.has(approxOffset - 1);
+          });
+          if (eligibleAirports.length > 0) {
+            const airport = eligibleAirports[Math.floor(Math.random() * eligibleAirports.length)];
+            const x = (airport.lng + 180) * (canvas.width / 360);
+            const y = ((-1 * airport.lat) + 90) * (canvas.height / 180);
+            const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
+            particles.push(new Particle(x, y, sparkleColor, false, 0));
+          }
+        }
 
         // Dev mode: also generate celebration sparkles for the celebrating offset even if not in pastTimezones
         if (celebratingOffset !== null && currentIntensity > 0) {
