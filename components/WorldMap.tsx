@@ -443,17 +443,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     let animationFrameId: number;
     let particles: Particle[] = [];
 
-    // Check if a pixel position is on land
-    const isOnLand = (x: number, y: number): boolean => {
-      if (!landMask) return false; // Don't show sparkles until mask is ready
-      const px = Math.floor(x);
-      const py = Math.floor(y);
-      if (px < 0 || px >= landMask.width || py < 0 || py >= landMask.height) return false;
-      const idx = (py * landMask.width + px) * 4;
-      // Check if pixel is white (land) - R channel > 100 means land
-      return landMask.data[idx] > 100;
-    };
-
     // Convert lat/lng to canvas coordinates matching the map's projection
     const latLngToCanvas = (lat: number, lng: number): { x: number; y: number } => {
       // Match the map's d3 geoEquirectangular projection
@@ -601,13 +590,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       }
     }
 
-    const addSparkleOnLand = (x: number, y: number, lat: number, lng: number, isCelebration: boolean = false, intensity: number = 0): boolean => {
-      if (!isOnLand(x, y)) return false;
-      const sparkleColor = getTemperatureColor(lat, lng);
-      particles.push(new Particle(x, y, sparkleColor, isCelebration, intensity));
-      return true;
-    };
-
     const handleResize = () => {
       if (containerRef.current && canvas) {
         canvas.width = containerRef.current.offsetWidth;
@@ -626,90 +608,35 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       const currentIntensity = celebrationIntensityRef.current;
       const celebratingOffset = newestTimezoneOffsetRef.current;
 
-      // Helper to generate sparkles for a timezone offset
-      const generateSparklesForOffset = (offset: number, isCelebrating: boolean) => {
-        const spawnChance = isCelebrating ? 0.5 - (currentIntensity * 0.3) : 0.85;
-        const spawnCount = isCelebrating ? Math.ceil(currentIntensity * 3) : 1;
+      // Sparkles only at airport locations - one at a time
+      const airports = getAirports();
 
-        for (let i = 0; i < spawnCount; i++) {
-          if (Math.random() > spawnChance) {
-            const centerLng = getTimezoneLongitude(offset);
-            const lngVariation = (Math.random() - 0.5) * 15;
-            const sparkLng = centerLng + lngVariation;
-            const sparkLat = Math.random() * 130 - 60;
-            const { x, y } = latLngToCanvas(sparkLat, sparkLng);
-            addSparkleOnLand(x, y, sparkLat, sparkLng, isCelebrating, currentIntensity);
-          }
-        }
-      };
-
-      // When all timezones have celebrated, sparkle the entire globe
-      // Match countdown behavior: ~25 timezones × 15% chance each = ~3-4 sparkles per frame
       if (allCelebratedRef.current) {
-        // Generate sparkles across the globe at same rate as countdown (simulate all timezones)
-        for (let i = 0; i < 25; i++) {
-          if (Math.random() > 0.85) { // 15% chance per "timezone" - same as countdown
-            const sparkLng = Math.random() * 360 - 180;
-            const sparkLat = Math.random() * 130 - 60;
-            const { x, y } = latLngToCanvas(sparkLat, sparkLng);
-            if (landMask) {
-              addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
-            } else {
-              const sparkleColor = getTemperatureColor(sparkLat, sparkLng);
-              particles.push(new Particle(x, y, sparkleColor, false, 0));
-            }
-          }
-        }
-
-        // Also spawn sparkles at airport locations to ensure small landmasses get coverage
-        const airports = getAirports();
-        if (Math.random() > 0.9) {
+        // After all celebrated: spawn at any airport worldwide
+        if (Math.random() > 0.92) { // ~8% chance per frame = steady gentle rate
           const airport = airports[Math.floor(Math.random() * airports.length)];
           const { x, y } = latLngToCanvas(airport.lat, airport.lng);
           const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
           particles.push(new Particle(x, y, sparkleColor, false, 0));
         }
       } else {
-        // For each past timezone, generate sparkles in vertical bands on land
-        pastTimezonesRef.current.forEach(tz => {
-          const isCelebrating = tz.offset === celebratingOffset && currentIntensity > 0;
-          generateSparklesForOffset(tz.offset, isCelebrating);
-        });
-
-        // Also spawn sparkles at airports in past timezones (ensures small landmasses get coverage)
-        const airports = getAirports();
+        // During countdown: only spawn at airports in past timezones
         const pastOffsets = new Set(pastTimezonesRef.current.map(tz => tz.offset));
-        if (Math.random() > 0.9) {
-          // Find airports roughly in past timezone longitudes
-          const eligibleAirports = airports.filter(ap => {
-            const approxOffset = Math.round(ap.lng / 15);
-            return pastOffsets.has(approxOffset) || pastOffsets.has(approxOffset + 1) || pastOffsets.has(approxOffset - 1);
-          });
-          if (eligibleAirports.length > 0) {
-            const airport = eligibleAirports[Math.floor(Math.random() * eligibleAirports.length)];
-            const { x, y } = latLngToCanvas(airport.lat, airport.lng);
-            const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
-            particles.push(new Particle(x, y, sparkleColor, false, 0));
-          }
-        }
 
-        // Dev mode: also generate celebration sparkles for the celebrating offset even if not in pastTimezones
-        if (celebratingOffset !== null && currentIntensity > 0) {
-          const isAlreadyInPast = pastTimezonesRef.current.some(tz => tz.offset === celebratingOffset);
-          if (!isAlreadyInPast) {
-            generateSparklesForOffset(celebratingOffset, true);
-          }
-        }
-      }
-
-      // Active fireworks (current timezone hitting midnight) - skip when all celebrated
-      if (!allCelebratedRef.current) {
-        activeFireworksRef.current.forEach(fw => {
-          if (Math.random() > 0.5) {
-            const { x, y } = latLngToCanvas(fw.lat, fw.lng);
-            addSparkleOnLand(x, y, fw.lat, fw.lng, true, 1);
-          }
+        // Filter airports to those in past timezones
+        const eligibleAirports = airports.filter(ap => {
+          const approxOffset = Math.round(ap.lng / 15);
+          return pastOffsets.has(approxOffset) || pastOffsets.has(approxOffset + 1) || pastOffsets.has(approxOffset - 1);
         });
+
+        if (eligibleAirports.length > 0 && Math.random() > 0.92) {
+          const airport = eligibleAirports[Math.floor(Math.random() * eligibleAirports.length)];
+          const isCelebrating = celebratingOffset !== null && currentIntensity > 0 &&
+            Math.abs(Math.round(airport.lng / 15) - celebratingOffset) <= 1;
+          const { x, y } = latLngToCanvas(airport.lat, airport.lng);
+          const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
+          particles.push(new Particle(x, y, sparkleColor, isCelebrating, currentIntensity));
+        }
       }
 
       // Update and draw particles
