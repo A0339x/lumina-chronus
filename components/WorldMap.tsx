@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, memo, useState, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 import { FireworkEvent, TimezoneData } from '../types';
-import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportCondition, WeatherCondition, WeatherIntensity } from '../services/metarService';
+import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportConditions, WeatherCondition, WeatherIntensity } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, TRACKED_FLIGHTS } from '../services/flightService';
@@ -661,16 +661,19 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       isCelebration: boolean;
       glowIntensity: number;
       pulsePhase: number;
-      weatherCondition: WeatherCondition;
-      weatherRingPhase: number;
+      weatherConditions: WeatherCondition[]; // Now supports multiple conditions
+      weatherRingPhases: number[]; // Separate phase for each condition
 
-      constructor(x: number, y: number, color: string, isCelebration: boolean = false, celebrationIntensity: number = 0, weatherCondition: WeatherCondition = null) {
+      constructor(x: number, y: number, color: string, isCelebration: boolean = false, celebrationIntensity: number = 0, weatherConditions: WeatherCondition[] = []) {
         this.x = x;
         this.y = y;
         this.color = color;
         this.isCelebration = isCelebration;
-        this.weatherCondition = weatherCondition;
-        this.weatherRingPhase = Math.random() * Math.PI * 2;
+        this.weatherConditions = weatherConditions;
+        // Initialize phases for each condition (staggered for visual interest)
+        this.weatherRingPhases = weatherConditions.map((_, i) =>
+          (Math.random() * Math.PI * 2) + (i * Math.PI * 0.5)
+        );
 
         if (isCelebration) {
           // Celebration particles: larger, brighter, longer-lasting
@@ -702,22 +705,33 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         ctx.translate(this.x, this.y);
 
         // Draw weather alert pulsing rings FIRST (behind the sparkle)
-        if (this.weatherCondition) {
-          const ringColor = getWeatherConditionColor(this.weatherCondition);
-          // Draw 2-3 expanding rings
-          for (let i = 0; i < 3; i++) {
-            const ringPhase = (this.weatherRingPhase + i * (Math.PI * 2 / 3)) % (Math.PI * 2);
-            const ringProgress = ringPhase / (Math.PI * 2); // 0 to 1
-            const ringRadius = 8 + ringProgress * 20; // Expand from 8 to 28 pixels
-            const ringAlpha = (1 - ringProgress) * 0.6; // Fade out as it expands
+        // Each condition gets its own ring set at different radii
+        if (this.weatherConditions.length > 0) {
+          // Base radius increases for each additional condition (concentric)
+          const radiusStep = 12; // Spacing between condition ring sets
 
-            ctx.beginPath();
-            ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
-            ctx.strokeStyle = ringColor;
-            ctx.lineWidth = 2 - ringProgress; // Thinner as it expands
-            ctx.globalAlpha = ringAlpha * this.alpha;
-            ctx.stroke();
-          }
+          this.weatherConditions.forEach((condition, condIndex) => {
+            if (!condition) return;
+
+            const ringColor = getWeatherConditionColor(condition);
+            const baseRadius = 8 + (condIndex * radiusStep); // Inner conditions closer, outer farther
+            const ringPhase = this.weatherRingPhases[condIndex] || 0;
+
+            // Draw 3 expanding rings for this condition
+            for (let i = 0; i < 3; i++) {
+              const phase = (ringPhase + i * (Math.PI * 2 / 3)) % (Math.PI * 2);
+              const ringProgress = phase / (Math.PI * 2); // 0 to 1
+              const ringRadius = baseRadius + ringProgress * 18; // Expand outward
+              const ringAlpha = (1 - ringProgress) * 0.5; // Fade out as it expands
+
+              ctx.beginPath();
+              ctx.arc(0, 0, ringRadius, 0, Math.PI * 2);
+              ctx.strokeStyle = ringColor;
+              ctx.lineWidth = 2 - ringProgress; // Thinner as it expands
+              ctx.globalAlpha = ringAlpha * this.alpha;
+              ctx.stroke();
+            }
+          });
           ctx.globalAlpha = this.alpha;
         }
 
@@ -763,11 +777,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       update(): boolean {
         this.life++;
 
-        // Animate weather ring expansion
-        if (this.weatherCondition) {
-          this.weatherRingPhase += 0.08; // Speed of ring expansion
-          if (this.weatherRingPhase > Math.PI * 2) {
-            this.weatherRingPhase -= Math.PI * 2;
+        // Animate weather ring expansion for all conditions
+        if (this.weatherConditions.length > 0) {
+          for (let i = 0; i < this.weatherRingPhases.length; i++) {
+            this.weatherRingPhases[i] += 0.08; // Speed of ring expansion
+            if (this.weatherRingPhases[i] > Math.PI * 2) {
+              this.weatherRingPhases[i] -= Math.PI * 2;
+            }
           }
         }
 
@@ -830,8 +846,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           if (!airportHasSparkle.has(index)) {
             const { x, y } = latLngToCanvas(airport.lat, airport.lng);
             const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
-            const condition = getAirportCondition(airport.icao);
-            const particle = new Particle(x, y, sparkleColor, false, 0, condition);
+            const conditions = getAirportConditions(airport.icao);
+            const particle = new Particle(x, y, sparkleColor, false, 0, conditions);
             (particle as any).airportIndex = index;
             // Stagger the start so they don't all twinkle in sync
             particle.life = Math.floor(Math.random() * particle.maxLife * 0.8);
@@ -851,8 +867,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
               Math.abs(approxOffset - celebratingOffset) <= 1;
             const { x, y } = latLngToCanvas(airport.lat, airport.lng);
             const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
-            const condition = getAirportCondition(airport.icao);
-            const particle = new Particle(x, y, sparkleColor, isCelebrating, currentIntensity, condition);
+            const conditions = getAirportConditions(airport.icao);
+            const particle = new Particle(x, y, sparkleColor, isCelebrating, currentIntensity, conditions);
             (particle as any).airportIndex = index;
             // Stagger the start so they don't all twinkle in sync
             particle.life = Math.floor(Math.random() * particle.maxLife * 0.8);
@@ -1123,15 +1139,19 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                     <p className="text-white/70 text-xs leading-relaxed">
                       {getTempDescription(hoverInfo.airportInfo.temp, unit, formatTemp)}
                     </p>
-                    {hoverInfo.airportInfo.condition && (
-                      <div className="mt-2 flex items-center gap-2">
-                        <span
-                          className="w-2 h-2 rounded-full animate-pulse"
-                          style={{ backgroundColor: getWeatherConditionColor(hoverInfo.airportInfo.condition) }}
-                        />
-                        <span className="text-xs font-medium" style={{ color: getWeatherConditionColor(hoverInfo.airportInfo.condition) }}>
-                          {getWeatherConditionLabel(hoverInfo.airportInfo.condition, hoverInfo.airportInfo.intensity)}
-                        </span>
+                    {hoverInfo.airportInfo.conditions.length > 0 && (
+                      <div className="mt-2 flex flex-col gap-1">
+                        {hoverInfo.airportInfo.conditions.map((condition, idx) => condition && (
+                          <div key={idx} className="flex items-center gap-2">
+                            <span
+                              className="w-2 h-2 rounded-full animate-pulse"
+                              style={{ backgroundColor: getWeatherConditionColor(condition) }}
+                            />
+                            <span className="text-xs font-medium" style={{ color: getWeatherConditionColor(condition) }}>
+                              {getWeatherConditionLabel(condition, idx === 0 ? hoverInfo.airportInfo.intensity : null)}
+                            </span>
+                          </div>
+                        ))}
                       </div>
                     )}
                   </div>
@@ -1153,15 +1173,19 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 <p className="text-white/70 text-xs leading-relaxed">
                   {getTempDescription(hoverInfo.airportInfo.temp, unit, formatTemp)}
                 </p>
-                {hoverInfo.airportInfo.condition && (
-                  <div className="mt-2 flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full animate-pulse"
-                      style={{ backgroundColor: getWeatherConditionColor(hoverInfo.airportInfo.condition) }}
-                    />
-                    <span className="text-xs font-medium" style={{ color: getWeatherConditionColor(hoverInfo.airportInfo.condition) }}>
-                      {getWeatherConditionLabel(hoverInfo.airportInfo.condition, hoverInfo.airportInfo.intensity)}
-                    </span>
+                {hoverInfo.airportInfo.conditions.length > 0 && (
+                  <div className="mt-2 flex flex-col gap-1">
+                    {hoverInfo.airportInfo.conditions.map((condition, idx) => condition && (
+                      <div key={idx} className="flex items-center gap-2">
+                        <span
+                          className="w-2 h-2 rounded-full animate-pulse"
+                          style={{ backgroundColor: getWeatherConditionColor(condition) }}
+                        />
+                        <span className="text-xs font-medium" style={{ color: getWeatherConditionColor(condition) }}>
+                          {getWeatherConditionLabel(condition, idx === 0 ? hoverInfo.airportInfo.intensity : null)}
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 )}
               </>
