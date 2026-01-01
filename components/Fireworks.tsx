@@ -8,6 +8,7 @@ interface FireworksProps {
 
 const Fireworks: React.FC<FireworksProps> = ({ trigger, brief = false }) => {
     const intervalRef = useRef<number | null>(null);
+    const lastFireTimeRef = useRef<number>(0);
 
     useEffect(() => {
         if (trigger) {
@@ -56,16 +57,32 @@ const Fireworks: React.FC<FireworksProps> = ({ trigger, brief = false }) => {
                     origin: { y: 0.6 },
                     colors
                 });
+                lastFireTimeRef.current = Date.now();
 
                 // Sustained fireworks
                 intervalRef.current = window.setInterval(function() {
-                    const timeLeft = animationEnd - Date.now();
+                    const now = Date.now();
+                    const timeLeft = animationEnd - now;
 
                     if (timeLeft <= 0) {
                         if (intervalRef.current) clearInterval(intervalRef.current);
                         return;
                     }
 
+                    // Skip if page is hidden (tab in background)
+                    if (document.hidden) {
+                        lastFireTimeRef.current = now;
+                        return;
+                    }
+
+                    // Skip if too much time passed (prevents burst after returning to tab)
+                    const timeSinceLastFire = now - lastFireTimeRef.current;
+                    if (timeSinceLastFire > 500) {
+                        // Reset timing, just fire one normal burst
+                        lastFireTimeRef.current = now;
+                    }
+
+                    lastFireTimeRef.current = now;
                     const particleCount = 50 * (timeLeft / duration);
 
                     // since particles fall down, start a bit higher than random
