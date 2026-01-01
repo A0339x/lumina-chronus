@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Globe2, Sparkles, Thermometer, MapPin, Heart, ChevronRight, ChevronLeft } from 'lucide-react';
 
@@ -11,9 +11,10 @@ interface OnboardingStep {
   title: string;
   subtitle: string;
   description: string;
+  desktopOnly?: boolean;
 }
 
-const steps: OnboardingStep[] = [
+const allSteps: OnboardingStep[] = [
   {
     icon: <Globe2 size={48} strokeWidth={1} />,
     title: "Welcome to Lumina Chronos",
@@ -36,7 +37,8 @@ const steps: OnboardingStep[] = [
     icon: <MapPin size={48} strokeWidth={1} />,
     title: "Local Greetings",
     subtitle: "Happy New Year in Every Language",
-    description: "Select any city to see 'Happy New Year' in its local language. Hover over countries to explore temperature data."
+    description: "Select any city to see 'Happy New Year' in its local language. Hover over countries to explore temperature data.",
+    desktopOnly: true
   },
   {
     icon: <Heart size={48} strokeWidth={1} />,
@@ -49,6 +51,15 @@ const steps: OnboardingStep[] = [
 const Onboarding: React.FC<OnboardingProps> = ({ onComplete }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isExiting, setIsExiting] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  // Detect mobile on mount
+  useEffect(() => {
+    setIsMobile(window.innerWidth < 1024);
+  }, []);
+
+  // Filter out desktop-only steps on mobile
+  const steps = isMobile ? allSteps.filter(s => !s.desktopOnly) : allSteps;
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
