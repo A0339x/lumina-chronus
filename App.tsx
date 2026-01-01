@@ -115,12 +115,15 @@ const App: React.FC = () => {
   useEffect(() => {
     const init = () => {
       const next = getNextMidnightTimezone();
+      const past = getPastTimezones();
+      console.log('[Lumina] Next timezone:', next.timezone.name, 'offset:', next.timezone.offset);
+      console.log('[Lumina] Past timezones count:', past.length);
       setState({
         timezone: next.timezone,
         targetDate: next.targetDate,
         timeRemaining: next.targetDate.getTime() - new Date().getTime()
       });
-      setPastTimezones(getPastTimezones());
+      setPastTimezones(past);
       setIsInitializing(false);
     };
     init();
