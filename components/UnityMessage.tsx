@@ -39,7 +39,7 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
         scale: isExiting ? 1.05 : 1
       }}
       transition={{ duration: isExiting ? 0.8 : 1.5, ease: "easeOut" }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-indigo-950/95 via-slate-950/98 to-slate-950/95 backdrop-blur-sm"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md"
     >
       <div className="text-center px-4 max-w-[95vw] overflow-hidden">
         {/* Animated globe icon */}
