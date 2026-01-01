@@ -276,13 +276,13 @@ const App: React.FC = () => {
             />
           </div>
 
-          {/* Flight Tracker - Top Right */}
-          <div className="absolute top-4 right-4 z-20">
+          {/* Flight Tracker - Hidden for now */}
+          {/* <div className="absolute top-4 right-4 z-20">
             <FlightTracker
               flights={trackedFlights}
               onFlightsChange={handleFlightsChange}
             />
-          </div>
+          </div> */}
 
           {/* Countdown or Celebration Header - Top Left */}
           <div className="absolute top-4 left-4 z-20">
@@ -344,13 +344,13 @@ const App: React.FC = () => {
                       />
                   </div>
               </div>
-              {/* Flight Tracker - Top Right of map area */}
-              <div className="absolute top-2 right-4 z-20">
+              {/* Flight Tracker - Hidden for now */}
+              {/* <div className="absolute top-2 right-4 z-20">
                 <FlightTracker
                   flights={trackedFlights}
                   onFlightsChange={handleFlightsChange}
                 />
-              </div>
+              </div> */}
           </section>
 
           {/* Bottom Section: Compact Legend & Footer */}
