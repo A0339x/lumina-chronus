@@ -1,6 +1,6 @@
-// Script to fetch live temperatures and update the hardcoded values
+// Script to fetch live temperatures and weather conditions
 // Run by GitHub Actions every 3 hours
-// Fetches temps for ~500 major international airports
+// Fetches data for ~500 major international airports
 
 import fs from 'fs';
 import path from 'path';
@@ -10,6 +10,23 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+// Open-Meteo weather codes to condition mapping
+// https://open-meteo.com/en/docs#weathervariables
+const weatherCodeToCondition = (code) => {
+  if (code === 0) return null; // Clear sky - no alert
+  if (code === 1 || code === 2 || code === 3) return null; // Partly cloudy - no alert
+  if (code === 45 || code === 48) return 'fog'; // Fog
+  if (code >= 51 && code <= 55) return null; // Drizzle - no alert
+  if (code >= 56 && code <= 57) return 'freezing'; // Freezing drizzle
+  if (code >= 61 && code <= 65) return code >= 65 ? 'rain' : null; // Rain (only heavy)
+  if (code >= 66 && code <= 67) return 'freezing'; // Freezing rain
+  if (code >= 71 && code <= 77) return 'snow'; // Snow
+  if (code >= 80 && code <= 82) return code >= 82 ? 'rain' : null; // Rain showers (only violent)
+  if (code >= 85 && code <= 86) return 'snow'; // Snow showers
+  if (code >= 95 && code <= 99) return 'thunderstorm'; // Thunderstorm
+  return null;
+};
 
 // Extract airports from metarService.ts
 function getAirports() {
@@ -24,12 +41,12 @@ function getAirports() {
   return airports;
 }
 
-async function fetchTemperatures() {
+async function fetchWeatherData() {
   const airports = getAirports();
-  const temps = {};
-  const batchSize = 100; // Open-Meteo can handle larger batches
+  const weatherData = {};
+  const batchSize = 100;
 
-  console.log(`Fetching temperatures for ${airports.length} airports...`);
+  console.log(`Fetching weather data for ${airports.length} airports...`);
 
   for (let i = 0; i < airports.length; i += batchSize) {
     const batch = airports.slice(i, i + batchSize);
@@ -55,12 +72,16 @@ async function fetchTemperatures() {
 
       if (Array.isArray(data)) {
         data.forEach((item, idx) => {
-          if (item.current_weather?.temperature !== undefined) {
-            temps[batch[idx].icao] = Math.round(item.current_weather.temperature);
+          if (item.current_weather) {
+            const temp = Math.round(item.current_weather.temperature);
+            const condition = weatherCodeToCondition(item.current_weather.weathercode);
+            weatherData[batch[idx].icao] = { temp, condition };
           }
         });
-      } else if (data.current_weather?.temperature !== undefined) {
-        temps[batch[0].icao] = Math.round(data.current_weather.temperature);
+      } else if (data.current_weather) {
+        const temp = Math.round(data.current_weather.temperature);
+        const condition = weatherCodeToCondition(data.current_weather.weathercode);
+        weatherData[batch[0].icao] = { temp, condition };
       }
 
       if ((i / batchSize) % 20 === 0) {
@@ -71,11 +92,20 @@ async function fetchTemperatures() {
     }
   }
 
-  console.log(`Fetched ${Object.keys(temps).length} temperatures`);
-  return temps;
+  // Count conditions
+  const conditionCounts = {};
+  Object.values(weatherData).forEach(({ condition }) => {
+    if (condition) {
+      conditionCounts[condition] = (conditionCounts[condition] || 0) + 1;
+    }
+  });
+  console.log(`Fetched ${Object.keys(weatherData).length} airports`);
+  console.log('Weather conditions:', conditionCounts);
+
+  return weatherData;
 }
 
-async function updateMetarService(temps) {
+async function updateMetarService(weatherData) {
   const filePath = path.join(__dirname, '..', 'services', 'metarService.ts');
   let content = fs.readFileSync(filePath, 'utf-8');
 
@@ -90,39 +120,50 @@ async function updateMetarService(temps) {
     throw new Error('Could not find HARDCODED_TEMPS section in metarService.ts');
   }
 
-  // Generate new temps code - simple flat object
+  // Count airports with conditions
+  const withConditions = Object.values(weatherData).filter(d => d.condition).length;
+
+  // Generate new weather data code
   const lines = [
-    '// Hardcoded temperatures - auto-updated by GitHub Actions',
+    '// Hardcoded temperatures and weather conditions - auto-updated by GitHub Actions',
     `// Last updated: ${new Date().toISOString()}`,
-    `// Coverage: ${Object.keys(temps).length} airports`,
-    'const HARDCODED_TEMPS: Record<string, number> = {',
+    `// Coverage: ${Object.keys(weatherData).length} airports, ${withConditions} with active weather`,
+    'type WeatherCondition = "thunderstorm" | "snow" | "rain" | "fog" | "freezing" | null;',
+    'interface AirportWeather { temp: number; condition: WeatherCondition; }',
+    'const HARDCODED_WEATHER: Record<string, AirportWeather> = {',
   ];
 
-  // Add all temps in a compact format (20 per line)
-  const entries = Object.entries(temps);
-  for (let i = 0; i < entries.length; i += 20) {
-    const chunk = entries.slice(i, i + 20);
-    lines.push('  ' + chunk.map(([k, v]) => `"${k}": ${v}`).join(', ') + ',');
+  // Add all weather data in a compact format
+  const entries = Object.entries(weatherData);
+  for (let i = 0; i < entries.length; i += 10) {
+    const chunk = entries.slice(i, i + 10);
+    const formatted = chunk.map(([k, v]) => {
+      if (v.condition) {
+        return `"${k}":{temp:${v.temp},condition:"${v.condition}"}`;
+      }
+      return `"${k}":{temp:${v.temp},condition:null}`;
+    }).join(',');
+    lines.push('  ' + formatted + ',');
   }
 
   lines.push('};');
 
-  const newTempsCode = lines.join('\n');
-  content = content.substring(0, startIdx) + newTempsCode + '\n\n' + content.substring(endIdx);
+  const newCode = lines.join('\n');
+  content = content.substring(0, startIdx) + newCode + '\n\n' + content.substring(endIdx);
 
   fs.writeFileSync(filePath, content, 'utf-8');
-  console.log('Updated metarService.ts with new temperatures');
+  console.log('Updated metarService.ts with weather data');
 }
 
 async function main() {
   try {
-    const temps = await fetchTemperatures();
+    const weatherData = await fetchWeatherData();
 
-    if (Object.keys(temps).length < 400) {
-      throw new Error('Too few temperatures fetched, something went wrong');
+    if (Object.keys(weatherData).length < 400) {
+      throw new Error('Too few airports fetched, something went wrong');
     }
 
-    await updateMetarService(temps);
+    await updateMetarService(weatherData);
     console.log('Done!');
   } catch (error) {
     console.error('Failed:', error);

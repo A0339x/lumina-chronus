@@ -8,9 +8,12 @@ export interface Airport {
   name: string;
 }
 
+export type WeatherCondition = "thunderstorm" | "snow" | "rain" | "fog" | "freezing" | null;
+
 export interface NearestAirportInfo {
   airport: Airport;
   temp: number;
+  condition: WeatherCondition;
   distance: number; // in degrees (approximate)
 }
 
@@ -550,38 +553,63 @@ const AIRPORTS: Airport[] = [
   { icao: "PHLH", lat: 21.98, lng: -159.34, name: "Lihue" },
 ];
 
-// Hardcoded temperatures - auto-updated by GitHub Actions
+// Hardcoded temperatures and weather conditions - auto-updated by GitHub Actions
 // Last updated: 2026-01-01T13:51:21.386Z
-// Coverage: 476 airports
-const HARDCODED_TEMPS: Record<string, number> = {
-  "KATL": 3, "KLAX": 15, "KORD": -12, "KDFW": 5, "KDEN": 5, "KJFK": -4, "KSFO": 11, "KSEA": 2, "KLAS": 8, "KMCO": 8, "KEWR": -4, "KMIA": 11, "KPHX": 14, "KIAH": 4, "KBOS": -2, "KMSP": -15, "KFLL": 11, "KDTW": -14, "KPHL": -3, "KLGA": -4,
-  "KBWI": -2, "KSLC": 2, "KDCA": -2, "KIAD": -3, "KSAN": 17, "KTPA": 8, "KPDX": 4, "KSTL": 0, "KHNL": 23, "KMEM": 3, "KAUS": 5, "KBNA": 1, "KRDU": 3, "KCLT": 3, "KSMF": 8, "KSJC": 11, "KOAK": 11, "KCLE": -12, "KMKE": -15, "KPIT": -13,
-  "KIND": -5, "KCVG": -4, "KMCI": -1, "KSAT": 3, "KHOU": 5, "KDAL": 7, "KMDW": -11, "PANC": -9, "PAFA": -38, "CYYZ": -14, "CYVR": 3, "CYUL": -11, "CYYC": -6, "CYEG": -8, "CYOW": -16, "CYWG": -19, "CYHZ": 0, "CYQB": -9, "CYYJ": 4, "CYLW": -3,
-  "CYXE": -21, "CYQR": -14, "CYZF": -31, "CYXY": -24, "CYQT": -26, "CYYT": 2, "MMMX": 7, "MMUN": 17, "MMGL": 13, "MMMY": 9, "MMTJ": 16, "MMSM": 26, "MMMD": 18, "MMCZ": 20, "MMSD": 20, "MGGT": 13, "MSLP": 25, "MHTG": 20, "MNMG": 24, "MROC": 25,
-  "MPTO": 27, "MKJP": 26, "TNCM": 26, "TBPB": 27, "TTPP": 29, "MWCR": 22, "MUHA": 18, "MDSD": 24, "MDPP": 25, "MTPP": 26, "TJSJ": 26, "TIST": 26, "TLPL": 28, "TAPA": 26, "SBGR": 29, "SBGL": 36, "SBBR": 27, "SBCF": 29, "SBSV": 29, "SBRF": 32,
-  "SBPA": 31, "SBCT": 25, "SBFZ": 31, "SCEL": 27, "SAEZ": 24, "SABE": 24, "SACO": 31, "SAME": 30, "SLLP": 11, "SLVR": 26, "SPJC": 18, "SEQM": 14, "SEGU": 25, "SKBO": 14, "SKMR": 29, "SKCL": 22, "SKMD": 25, "SKRG": 16, "SVMI": 27, "SUMU": 26,
-  "SGAS": 27, "SBBV": 30, "SMJP": 28, "SYCJ": 27, "EGLL": 6, "EGKK": 5, "EGSS": 5, "EGLC": 6, "EGCC": 6, "EGBB": 6, "EGPH": 4, "EGPF": 5, "EGGW": 4, "EGNX": 6, "EGNT": 3, "EGGP": 7, "EGHI": 7, "EGGD": 5, "EGPD": 2, "EGAA": 5,
-  "EIDW": 6, "EICK": 6, "EINN": 8, "LFPG": 4, "LFPO": 3, "LFML": 10, "LFLL": 4, "LFMN": 12, "LFBD": 3, "LFBO": 4, "LFRS": 2, "LFSB": 1, "LFPB": 4, "EDDF": 3, "EDDM": 2, "EDDB": 2, "EDDL": 3, "EDDH": 2, "EDDK": 4, "EDDS": 3,
-  "EDDW": 3, "EDDN": 1, "EDDV": 3, "EDDP": 3, "LEMD": 6, "LEBL": 12, "LEPA": 13, "LEMG": 15, "LEVC": 14, "LEAL": 14, "LEZL": 14, "GCLP": 22, "GCTS": 18, "GCLA": 19, "GCFV": 23, "LPPT": 13, "LPPR": 10, "LPFR": 17, "LPMA": 17, "LIRF": 11,
-  "LIMC": 4, "LIME": 3, "LIPZ": 4, "LIRN": 10, "LIML": 4, "LIPE": 7, "LICC": 12, "LICJ": 15, "LIRA": 10, "LIRP": 7, "LIMF": 5, "LIEO": 14, "LIEE": 14, "EHAM": 6, "EHRD": 6, "EHEH": 4, "EBBR": 4, "EBCI": 3, "ELLX": 0, "LSZH": 1,
-  "LSGG": 5, "LSZB": 1, "LOWW": 5, "LOWS": 0, "LOWG": 3, "LOWI": 1, "LKPR": 0, "EPWA": 1, "EPKK": 1, "EPGD": 0, "EPWR": 2, "EPPO": 1, "EKCH": 4, "ESSA": 1, "ENGM": -2, "EFHK": -11, "BIKF": 4, "ESGG": 2, "ESMS": 3, "ENBR": 1,
-  "ENZV": 6, "ENTC": -11, "EFOU": -19, "EFRO": -19, "LGAV": 6, "LGTS": 5, "LGIR": 9, "LGKR": 10, "LGRP": 8, "LGSR": 8, "LGMK": 7, "LTFM": 1, "LTBA": 2, "LTFJ": 2, "LTAI": 8, "LTAC": -4, "LTBJ": 3, "LTBS": 10, "LTFE": 5, "LCLK": 15,
-  "LCPH": 14, "LHBP": 3, "LROP": 0, "LBSF": 0, "LYBE": 5, "LDZA": 6, "LDDU": 7, "LDSP": 8, "LJLJ": 4, "LWSK": 2, "LATI": 7, "UKBB": -11, "UKLL": -2, "UUEE": -11, "UUDD": -11, "UUWW": -11, "ULLI": -9, "UWWW": -10, "USSS": -10, "UNNT": -9,
-  "UUOB": -30, "UHWW": -14, "UEEE": -26, "OMDB": 21, "OMDW": 21, "OMAA": 21, "OMSJ": 21, "OTHH": 20, "OERK": 23, "OEJN": 28, "OEDF": 21, "OEMA": 25, "OKBK": 19, "OBBI": 20, "OOMS": 22, "OYAA": 18, "OIIE": 7, "OIII": 7, "OISS": 11, "OIKB": 20,
-  "OIAW": 16, "OIKK": 12, "OICC": 8, "LLBG": 16, "OLBA": 15, "OJAM": 13, "ORBI": 16, "ORER": 7, "GMMN": 23, "GMME": 22, "GMMX": 23, "GMTT": 18, "GMFF": 18, "GMAD": 25, "DAAG": 17, "DAOO": 17, "DTTA": 17, "DTMB": 16, "DTTJ": 16, "HECA": 20,
-  "HEGN": 23, "HESH": 22, "HEBA": 24, "HEAX": 16, "HLLT": 17, "DNMM": 33, "DNAA": 37, "DGAA": 31, "DIAP": 30, "GOBD": 33, "GABS": 34, "GVNP": 29, "GBYD": 29, "GLRB": 28, "DXXX": 32, "DBBB": 32, "HKJK": 22, "HKMO": 31, "HTDA": 29, "HTKJ": 27,
-  "HUEN": 26, "HRYR": 27, "HAAB": 21, "HDAM": 26, "HCMM": 30, "OYSN": 23, "FMEE": 26, "FIMP": 23, "FMCH": 30, "FMMI": 23, "FSIA": 28, "FKKD": 29, "FKYS": 30, "FOOL": 29, "FZAA": 28, "FCBB": 27, "FLLK": 27, "FVHA": 27, "FLLS": 27, "FYWH": 28,
-  "FBSK": 33, "FAOR": 24, "FACT": 26, "FALE": 24, "FAPE": 25, "FQMA": 32, "FWKI": 23, "ZBAA": -5, "ZBAD": -6, "ZSPD": 5, "ZSSS": 3, "ZGGG": 13, "VHHH": 17, "ZGSZ": 16, "ZUUU": 7, "ZUCK": 9, "ZHCC": 0, "ZLXY": 0, "ZWSH": -11, "ZYHB": -21,
-  "ZYTX": -15, "ZSAM": 13, "ZGKL": 5, "ZSNJ": 1, "ZSHC": 4, "ZPPP": 8, "ZBTJ": -5, "VMMC": 16, "RJTT": 6, "RJAA": 3, "RJBB": 7, "RJOO": 3, "RJCC": -13, "RJFF": 4, "RJGG": 6, "ROAH": 18, "RJSS": 0, "RJSN": 3, "RJOK": 5, "RKSI": -7,
-  "RKSS": -10, "RKPK": -4, "RKPC": 4, "RKTN": -7, "ZKPY": -14, "WSSS": 26, "WMKK": 26, "WMKP": 29, "WBKK": 28, "WBGG": 24, "VTBS": 28, "VTBD": 27, "VTSP": 28, "VTCC": 21, "VTSS": 27, "VTUK": 26, "VVNB": 18, "VVTS": 25, "VVDN": 19, "VVCR": 21,
-  "VDPP": 25, "VDSR": 23, "VLVT": 22, "VLLB": 21, "VYYY": 25, "VYMD": 21, "VGHS": 16, "VGCG": 20, "VECC": 18, "VRMM": 27, "VCBI": 27, "WIII": 26, "WADD": 29, "WARR": 27, "WIHH": 27, "WIMM": 26, "WIBB": 28, "WAFF": 27, "WICC": 23, "WASS": 28,
-  "RPLL": 27, "RPLC": 24, "RPVM": 25, "RPVD": 26, "RPVK": 24, "WBSB": 26, "WBLL": 27, "VIDP": 14, "VABB": 25, "VOBL": 23, "VOMM": 25, "VEBS": 18, "VOHY": 22, "VAAH": 23, "VOCI": 28, "VAGO": 26, "VOTP": 24, "VIAR": 13, "VIJP": 18, "VELR": 12,
-  "VOCL": 27, "VOTV": 28, "VEPT": 15, "VNKT": 11, "OPKC": 23, "OPLA": 13, "OPIS": 12, "RCTP": 16, "RCSS": 15, "RCMQ": 15, "RCKH": 18, "RCNN": 17, "YSSY": 14, "YMML": 14, "YBBN": 23, "YPPH": 28, "YPAD": 19, "YBCG": 20, "YBCS": 24, "YSCB": 12,
-  "YMHB": 14, "NZAA": 19, "NZWN": 17, "NZCH": 14, "NZQN": 14, "NZDN": 12, "NFFN": 26, "NWWW": 26, "NTAA": 27, "NSFA": 28, "NIUE": 27, "PGSN": 27, "PGUM": 27, "PHOG": 23, "PHKO": 26, "PHLH": 20,
+// Coverage: 476 airports, 0 with active weather
+interface AirportWeather { temp: number; condition: WeatherCondition; }
+const HARDCODED_WEATHER: Record<string, AirportWeather> = {
+  "KATL":{temp:3,condition:null},"KLAX":{temp:15,condition:null},"KORD":{temp:-12,condition:null},"KDFW":{temp:5,condition:null},"KDEN":{temp:5,condition:null},"KJFK":{temp:-4,condition:null},"KSFO":{temp:11,condition:null},"KSEA":{temp:2,condition:null},"KLAS":{temp:8,condition:null},"KMCO":{temp:8,condition:null},
+  "KEWR":{temp:-4,condition:null},"KMIA":{temp:11,condition:null},"KPHX":{temp:14,condition:null},"KIAH":{temp:4,condition:null},"KBOS":{temp:-2,condition:null},"KMSP":{temp:-15,condition:null},"KFLL":{temp:11,condition:null},"KDTW":{temp:-14,condition:null},"KPHL":{temp:-3,condition:null},"KLGA":{temp:-4,condition:null},
+  "KBWI":{temp:-2,condition:null},"KSLC":{temp:2,condition:null},"KDCA":{temp:-2,condition:null},"KIAD":{temp:-3,condition:null},"KSAN":{temp:17,condition:null},"KTPA":{temp:8,condition:null},"KPDX":{temp:4,condition:null},"KSTL":{temp:0,condition:null},"KHNL":{temp:23,condition:null},"KMEM":{temp:3,condition:null},
+  "KAUS":{temp:5,condition:null},"KBNA":{temp:1,condition:null},"KRDU":{temp:3,condition:null},"KCLT":{temp:3,condition:null},"KSMF":{temp:8,condition:null},"KSJC":{temp:11,condition:null},"KOAK":{temp:11,condition:null},"KCLE":{temp:-12,condition:null},"KMKE":{temp:-15,condition:null},"KPIT":{temp:-13,condition:null},
+  "KIND":{temp:-5,condition:null},"KCVG":{temp:-4,condition:null},"KMCI":{temp:-1,condition:null},"KSAT":{temp:3,condition:null},"KHOU":{temp:5,condition:null},"KDAL":{temp:7,condition:null},"KMDW":{temp:-11,condition:null},"PANC":{temp:-9,condition:null},"PAFA":{temp:-38,condition:null},"CYYZ":{temp:-14,condition:null},
+  "CYVR":{temp:3,condition:null},"CYUL":{temp:-11,condition:null},"CYYC":{temp:-6,condition:null},"CYEG":{temp:-8,condition:null},"CYOW":{temp:-16,condition:null},"CYWG":{temp:-19,condition:null},"CYHZ":{temp:0,condition:null},"CYQB":{temp:-9,condition:null},"CYYJ":{temp:4,condition:null},"CYLW":{temp:-3,condition:null},
+  "CYXE":{temp:-21,condition:null},"CYQR":{temp:-14,condition:null},"CYZF":{temp:-31,condition:null},"CYXY":{temp:-24,condition:null},"CYQT":{temp:-26,condition:null},"CYYT":{temp:2,condition:null},"MMMX":{temp:7,condition:null},"MMUN":{temp:17,condition:null},"MMGL":{temp:13,condition:null},"MMMY":{temp:9,condition:null},
+  "MMTJ":{temp:16,condition:null},"MMSM":{temp:26,condition:null},"MMMD":{temp:18,condition:null},"MMCZ":{temp:20,condition:null},"MMSD":{temp:20,condition:null},"MGGT":{temp:13,condition:null},"MSLP":{temp:25,condition:null},"MHTG":{temp:20,condition:null},"MNMG":{temp:24,condition:null},"MROC":{temp:25,condition:null},
+  "MPTO":{temp:27,condition:null},"MKJP":{temp:26,condition:null},"TNCM":{temp:26,condition:null},"TBPB":{temp:27,condition:null},"TTPP":{temp:29,condition:null},"MWCR":{temp:22,condition:null},"MUHA":{temp:18,condition:null},"MDSD":{temp:24,condition:null},"MDPP":{temp:25,condition:null},"MTPP":{temp:26,condition:null},
+  "TJSJ":{temp:26,condition:null},"TIST":{temp:26,condition:null},"TLPL":{temp:28,condition:null},"TAPA":{temp:26,condition:null},"SBGR":{temp:29,condition:null},"SBGL":{temp:36,condition:null},"SBBR":{temp:27,condition:null},"SBCF":{temp:29,condition:null},"SBSV":{temp:29,condition:null},"SBRF":{temp:32,condition:null},
+  "SBPA":{temp:31,condition:null},"SBCT":{temp:25,condition:null},"SBFZ":{temp:31,condition:null},"SCEL":{temp:27,condition:null},"SAEZ":{temp:24,condition:null},"SABE":{temp:24,condition:null},"SACO":{temp:31,condition:null},"SAME":{temp:30,condition:null},"SLLP":{temp:11,condition:null},"SLVR":{temp:26,condition:null},
+  "SPJC":{temp:18,condition:null},"SEQM":{temp:14,condition:null},"SEGU":{temp:25,condition:null},"SKBO":{temp:14,condition:null},"SKMR":{temp:29,condition:null},"SKCL":{temp:22,condition:null},"SKMD":{temp:25,condition:null},"SKRG":{temp:16,condition:null},"SVMI":{temp:27,condition:null},"SUMU":{temp:26,condition:null},
+  "SGAS":{temp:27,condition:null},"SBBV":{temp:30,condition:null},"SMJP":{temp:28,condition:null},"SYCJ":{temp:27,condition:null},"EGLL":{temp:6,condition:null},"EGKK":{temp:5,condition:null},"EGSS":{temp:5,condition:null},"EGLC":{temp:6,condition:null},"EGCC":{temp:6,condition:null},"EGBB":{temp:6,condition:null},
+  "EGPH":{temp:4,condition:null},"EGPF":{temp:5,condition:null},"EGGW":{temp:4,condition:null},"EGNX":{temp:6,condition:null},"EGNT":{temp:3,condition:null},"EGGP":{temp:7,condition:null},"EGHI":{temp:7,condition:null},"EGGD":{temp:5,condition:null},"EGPD":{temp:2,condition:null},"EGAA":{temp:5,condition:null},
+  "EIDW":{temp:6,condition:null},"EICK":{temp:6,condition:null},"EINN":{temp:8,condition:null},"LFPG":{temp:4,condition:null},"LFPO":{temp:3,condition:null},"LFML":{temp:10,condition:null},"LFLL":{temp:4,condition:null},"LFMN":{temp:12,condition:null},"LFBD":{temp:3,condition:null},"LFBO":{temp:4,condition:null},
+  "LFRS":{temp:2,condition:null},"LFSB":{temp:1,condition:null},"LFPB":{temp:4,condition:null},"EDDF":{temp:3,condition:null},"EDDM":{temp:2,condition:null},"EDDB":{temp:2,condition:null},"EDDL":{temp:3,condition:null},"EDDH":{temp:2,condition:null},"EDDK":{temp:4,condition:null},"EDDS":{temp:3,condition:null},
+  "EDDW":{temp:3,condition:null},"EDDN":{temp:1,condition:null},"EDDV":{temp:3,condition:null},"EDDP":{temp:3,condition:null},"LEMD":{temp:6,condition:null},"LEBL":{temp:12,condition:null},"LEPA":{temp:13,condition:null},"LEMG":{temp:15,condition:null},"LEVC":{temp:14,condition:null},"LEAL":{temp:14,condition:null},
+  "LEZL":{temp:14,condition:null},"GCLP":{temp:22,condition:null},"GCTS":{temp:18,condition:null},"GCLA":{temp:19,condition:null},"GCFV":{temp:23,condition:null},"LPPT":{temp:13,condition:null},"LPPR":{temp:10,condition:null},"LPFR":{temp:17,condition:null},"LPMA":{temp:17,condition:null},"LIRF":{temp:11,condition:null},
+  "LIMC":{temp:4,condition:null},"LIME":{temp:3,condition:null},"LIPZ":{temp:4,condition:null},"LIRN":{temp:10,condition:null},"LIML":{temp:4,condition:null},"LIPE":{temp:7,condition:null},"LICC":{temp:12,condition:null},"LICJ":{temp:15,condition:null},"LIRA":{temp:10,condition:null},"LIRP":{temp:7,condition:null},
+  "LIMF":{temp:5,condition:null},"LIEO":{temp:14,condition:null},"LIEE":{temp:14,condition:null},"EHAM":{temp:6,condition:null},"EHRD":{temp:6,condition:null},"EHEH":{temp:4,condition:null},"EBBR":{temp:4,condition:null},"EBCI":{temp:3,condition:null},"ELLX":{temp:0,condition:null},"LSZH":{temp:1,condition:null},
+  "LSGG":{temp:5,condition:null},"LSZB":{temp:1,condition:null},"LOWW":{temp:5,condition:null},"LOWS":{temp:0,condition:null},"LOWG":{temp:3,condition:null},"LOWI":{temp:1,condition:null},"LKPR":{temp:0,condition:null},"EPWA":{temp:1,condition:null},"EPKK":{temp:1,condition:null},"EPGD":{temp:0,condition:null},
+  "EPWR":{temp:2,condition:null},"EPPO":{temp:1,condition:null},"EKCH":{temp:4,condition:null},"ESSA":{temp:1,condition:null},"ENGM":{temp:-2,condition:null},"EFHK":{temp:-11,condition:null},"BIKF":{temp:4,condition:null},"ESGG":{temp:2,condition:null},"ESMS":{temp:3,condition:null},"ENBR":{temp:1,condition:null},
+  "ENZV":{temp:6,condition:null},"ENTC":{temp:-11,condition:null},"EFOU":{temp:-19,condition:null},"EFRO":{temp:-19,condition:null},"LGAV":{temp:6,condition:null},"LGTS":{temp:5,condition:null},"LGIR":{temp:9,condition:null},"LGKR":{temp:10,condition:null},"LGRP":{temp:8,condition:null},"LGSR":{temp:8,condition:null},
+  "LGMK":{temp:7,condition:null},"LTFM":{temp:1,condition:null},"LTBA":{temp:2,condition:null},"LTFJ":{temp:2,condition:null},"LTAI":{temp:8,condition:null},"LTAC":{temp:-4,condition:null},"LTBJ":{temp:3,condition:null},"LTBS":{temp:10,condition:null},"LTFE":{temp:5,condition:null},"LCLK":{temp:15,condition:null},
+  "LCPH":{temp:14,condition:null},"LHBP":{temp:3,condition:null},"LROP":{temp:0,condition:null},"LBSF":{temp:0,condition:null},"LYBE":{temp:5,condition:null},"LDZA":{temp:6,condition:null},"LDDU":{temp:7,condition:null},"LDSP":{temp:8,condition:null},"LJLJ":{temp:4,condition:null},"LWSK":{temp:2,condition:null},
+  "LATI":{temp:7,condition:null},"UKBB":{temp:-11,condition:null},"UKLL":{temp:-2,condition:null},"UUEE":{temp:-11,condition:null},"UUDD":{temp:-11,condition:null},"UUWW":{temp:-11,condition:null},"ULLI":{temp:-9,condition:null},"UWWW":{temp:-10,condition:null},"USSS":{temp:-10,condition:null},"UNNT":{temp:-9,condition:null},
+  "UUOB":{temp:-30,condition:null},"UHWW":{temp:-14,condition:null},"UEEE":{temp:-26,condition:null},"OMDB":{temp:21,condition:null},"OMDW":{temp:21,condition:null},"OMAA":{temp:21,condition:null},"OMSJ":{temp:21,condition:null},"OTHH":{temp:20,condition:null},"OERK":{temp:23,condition:null},"OEJN":{temp:28,condition:null},
+  "OEDF":{temp:21,condition:null},"OEMA":{temp:25,condition:null},"OKBK":{temp:19,condition:null},"OBBI":{temp:20,condition:null},"OOMS":{temp:22,condition:null},"OYAA":{temp:18,condition:null},"OIIE":{temp:7,condition:null},"OIII":{temp:7,condition:null},"OISS":{temp:11,condition:null},"OIKB":{temp:20,condition:null},
+  "OIAW":{temp:16,condition:null},"OIKK":{temp:12,condition:null},"OICC":{temp:8,condition:null},"LLBG":{temp:16,condition:null},"OLBA":{temp:15,condition:null},"OJAM":{temp:13,condition:null},"ORBI":{temp:16,condition:null},"ORER":{temp:7,condition:null},"GMMN":{temp:23,condition:null},"GMME":{temp:22,condition:null},
+  "GMMX":{temp:23,condition:null},"GMTT":{temp:18,condition:null},"GMFF":{temp:18,condition:null},"GMAD":{temp:25,condition:null},"DAAG":{temp:17,condition:null},"DAOO":{temp:17,condition:null},"DTTA":{temp:17,condition:null},"DTMB":{temp:16,condition:null},"DTTJ":{temp:16,condition:null},"HECA":{temp:20,condition:null},
+  "HEGN":{temp:23,condition:null},"HESH":{temp:22,condition:null},"HEBA":{temp:24,condition:null},"HEAX":{temp:16,condition:null},"HLLT":{temp:17,condition:null},"DNMM":{temp:33,condition:null},"DNAA":{temp:37,condition:null},"DGAA":{temp:31,condition:null},"DIAP":{temp:30,condition:null},"GOBD":{temp:33,condition:null},
+  "GABS":{temp:34,condition:null},"GVNP":{temp:29,condition:null},"GBYD":{temp:29,condition:null},"GLRB":{temp:28,condition:null},"DXXX":{temp:32,condition:null},"DBBB":{temp:32,condition:null},"HKJK":{temp:22,condition:null},"HKMO":{temp:31,condition:null},"HTDA":{temp:29,condition:null},"HTKJ":{temp:27,condition:null},
+  "HUEN":{temp:26,condition:null},"HRYR":{temp:27,condition:null},"HAAB":{temp:21,condition:null},"HDAM":{temp:26,condition:null},"HCMM":{temp:30,condition:null},"OYSN":{temp:23,condition:null},"FMEE":{temp:26,condition:null},"FIMP":{temp:23,condition:null},"FMCH":{temp:30,condition:null},"FMMI":{temp:23,condition:null},
+  "FSIA":{temp:28,condition:null},"FKKD":{temp:29,condition:null},"FKYS":{temp:30,condition:null},"FOOL":{temp:29,condition:null},"FZAA":{temp:28,condition:null},"FCBB":{temp:27,condition:null},"FLLK":{temp:27,condition:null},"FVHA":{temp:27,condition:null},"FLLS":{temp:27,condition:null},"FYWH":{temp:28,condition:null},
+  "FBSK":{temp:33,condition:null},"FAOR":{temp:24,condition:null},"FACT":{temp:26,condition:null},"FALE":{temp:24,condition:null},"FAPE":{temp:25,condition:null},"FQMA":{temp:32,condition:null},"FWKI":{temp:23,condition:null},"ZBAA":{temp:-5,condition:null},"ZBAD":{temp:-6,condition:null},"ZSPD":{temp:5,condition:null},
+  "ZSSS":{temp:3,condition:null},"ZGGG":{temp:13,condition:null},"VHHH":{temp:17,condition:null},"ZGSZ":{temp:16,condition:null},"ZUUU":{temp:7,condition:null},"ZUCK":{temp:9,condition:null},"ZHCC":{temp:0,condition:null},"ZLXY":{temp:0,condition:null},"ZWSH":{temp:-11,condition:null},"ZYHB":{temp:-21,condition:null},
+  "ZYTX":{temp:-15,condition:null},"ZSAM":{temp:13,condition:null},"ZGKL":{temp:5,condition:null},"ZSNJ":{temp:1,condition:null},"ZSHC":{temp:4,condition:null},"ZPPP":{temp:8,condition:null},"ZBTJ":{temp:-5,condition:null},"VMMC":{temp:16,condition:null},"RJTT":{temp:6,condition:null},"RJAA":{temp:3,condition:null},
+  "RJBB":{temp:7,condition:null},"RJOO":{temp:3,condition:null},"RJCC":{temp:-13,condition:null},"RJFF":{temp:4,condition:null},"RJGG":{temp:6,condition:null},"ROAH":{temp:18,condition:null},"RJSS":{temp:0,condition:null},"RJSN":{temp:3,condition:null},"RJOK":{temp:5,condition:null},"RKSI":{temp:-7,condition:null},
+  "RKSS":{temp:-10,condition:null},"RKPK":{temp:-4,condition:null},"RKPC":{temp:4,condition:null},"RKTN":{temp:-7,condition:null},"ZKPY":{temp:-14,condition:null},"WSSS":{temp:26,condition:null},"WMKK":{temp:26,condition:null},"WMKP":{temp:29,condition:null},"WBKK":{temp:28,condition:null},"WBGG":{temp:24,condition:null},
+  "VTBS":{temp:28,condition:null},"VTBD":{temp:27,condition:null},"VTSP":{temp:28,condition:null},"VTCC":{temp:21,condition:null},"VTSS":{temp:27,condition:null},"VTUK":{temp:26,condition:null},"VVNB":{temp:18,condition:null},"VVTS":{temp:25,condition:null},"VVDN":{temp:19,condition:null},"VVCR":{temp:21,condition:null},
+  "VDPP":{temp:25,condition:null},"VDSR":{temp:23,condition:null},"VLVT":{temp:22,condition:null},"VLLB":{temp:21,condition:null},"VYYY":{temp:25,condition:null},"VYMD":{temp:21,condition:null},"VGHS":{temp:16,condition:null},"VGCG":{temp:20,condition:null},"VECC":{temp:18,condition:null},"VRMM":{temp:27,condition:null},
+  "VCBI":{temp:27,condition:null},"WIII":{temp:26,condition:null},"WADD":{temp:29,condition:null},"WARR":{temp:27,condition:null},"WIHH":{temp:27,condition:null},"WIMM":{temp:26,condition:null},"WIBB":{temp:28,condition:null},"WAFF":{temp:27,condition:null},"WICC":{temp:23,condition:null},"WASS":{temp:28,condition:null},
+  "RPLL":{temp:27,condition:null},"RPLC":{temp:24,condition:null},"RPVM":{temp:25,condition:null},"RPVD":{temp:26,condition:null},"RPVK":{temp:24,condition:null},"WBSB":{temp:26,condition:null},"WBLL":{temp:27,condition:null},"VIDP":{temp:14,condition:null},"VABB":{temp:25,condition:null},"VOBL":{temp:23,condition:null},
+  "VOMM":{temp:25,condition:null},"VEBS":{temp:18,condition:null},"VOHY":{temp:22,condition:null},"VAAH":{temp:23,condition:null},"VOCI":{temp:28,condition:null},"VAGO":{temp:26,condition:null},"VOTP":{temp:24,condition:null},"VIAR":{temp:13,condition:null},"VIJP":{temp:18,condition:null},"VELR":{temp:12,condition:null},
+  "VOCL":{temp:27,condition:null},"VOTV":{temp:28,condition:null},"VEPT":{temp:15,condition:null},"VNKT":{temp:11,condition:null},"OPKC":{temp:23,condition:null},"OPLA":{temp:13,condition:null},"OPIS":{temp:12,condition:null},"RCTP":{temp:16,condition:null},"RCSS":{temp:15,condition:null},"RCMQ":{temp:15,condition:null},
+  "RCKH":{temp:18,condition:null},"RCNN":{temp:17,condition:null},"YSSY":{temp:14,condition:null},"YMML":{temp:14,condition:null},"YBBN":{temp:23,condition:null},"YPPH":{temp:28,condition:null},"YPAD":{temp:19,condition:null},"YBCG":{temp:20,condition:null},"YBCS":{temp:24,condition:null},"YSCB":{temp:12,condition:null},
+  "YMHB":{temp:14,condition:null},"NZAA":{temp:19,condition:null},"NZWN":{temp:17,condition:null},"NZCH":{temp:14,condition:null},"NZQN":{temp:14,condition:null},"NZDN":{temp:12,condition:null},"NFFN":{temp:26,condition:null},"NWWW":{temp:26,condition:null},"NTAA":{temp:27,condition:null},"NSFA":{temp:28,condition:null},
+  "NIUE":{temp:27,condition:null},"PGSN":{temp:27,condition:null},"PGUM":{temp:27,condition:null},"PHOG":{temp:23,condition:null},"PHKO":{temp:26,condition:null},"PHLH":{temp:20,condition:null},
 };
 
 // Convert to Map for faster lookups
-const TEMP_MAP = new Map(Object.entries(HARDCODED_TEMPS));
+const WEATHER_MAP = new Map(Object.entries(HARDCODED_WEATHER));
 
 // Haversine distance approximation (returns degrees for simplicity)
 function getDistance(lat1: number, lng1: number, lat2: number, lng2: number): number {
@@ -605,9 +633,9 @@ export function getNearestAirportTemp(lat: number, lng: number): NearestAirportI
 
   if (!nearest) return null;
 
-  const temp = TEMP_MAP.get(nearest.icao);
-  if (temp === undefined) {
-    // No temp data for this airport, estimate based on latitude and season
+  const weather = WEATHER_MAP.get(nearest.icao);
+  if (weather === undefined) {
+    // No weather data for this airport, estimate based on latitude and season
     const month = new Date().getMonth();
     const isWinter = month < 3 || month > 9;
     const latFactor = Math.abs(nearest.lat) / 90;
@@ -616,13 +644,15 @@ export function getNearestAirportTemp(lat: number, lng: number): NearestAirportI
     return {
       airport: nearest,
       temp: Math.round(baseTemp + seasonalAdj * latFactor),
+      condition: null,
       distance: nearestDist
     };
   }
 
   return {
     airport: nearest,
-    temp,
+    temp: weather.temp,
+    condition: weather.condition,
     distance: nearestDist
   };
 }
@@ -634,7 +664,14 @@ export function getAllAirports(): Airport[] {
 
 // Get temperature for a specific airport
 export function getAirportTemp(icao: string): number | null {
-  return TEMP_MAP.get(icao) ?? null;
+  const weather = WEATHER_MAP.get(icao);
+  return weather?.temp ?? null;
+}
+
+// Get weather condition for a specific airport
+export function getAirportCondition(icao: string): WeatherCondition {
+  const weather = WEATHER_MAP.get(icao);
+  return weather?.condition ?? null;
 }
 
 // Alias for backwards compatibility
