@@ -430,6 +430,19 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     return () => clearInterval(interval);
   }, []);
 
+  // Update flight tooltip when live data changes (so numbers update while hovering)
+  useEffect(() => {
+    if (isFlightTooltipVisible && flightHoverInfo) {
+      const liveAC999 = liveFlights.get('ACA999');
+      const flight = liveAC999 || FALLBACK_FLIGHT;
+      setFlightHoverInfo(prev => prev ? {
+        ...prev,
+        flight: flight as FlightInfo,
+        progress: calculateFlightProgress(flight as FlightInfo),
+      } : null);
+    }
+  }, [liveFlights, isFlightTooltipVisible]);
+
   // Dev mode: trigger celebration on demand
   useEffect(() => {
     if (devCelebrationOffset === null || devCelebrationOffset === undefined || !devTrigger) return;
