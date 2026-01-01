@@ -1017,17 +1017,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       ctx.arc(originPos.x, originPos.y, 2.5, 0, Math.PI * 2);
       ctx.fill();
 
-      // Destination (Puerto Vallarta) - ring around the airport sparkle
-      ctx.strokeStyle = 'rgba(253, 224, 71, 0.7)'; // Warm gold to mark destination
+      // Destination (Puerto Vallarta) - subtle ring to complement origin dot
+      ctx.strokeStyle = 'rgba(199, 210, 254, 0.6)';
       ctx.lineWidth = 1.5;
       ctx.beginPath();
-      ctx.arc(destPos.x, destPos.y, 8, 0, Math.PI * 2); // Larger ring around sparkle
+      ctx.arc(destPos.x, destPos.y, 3.5, 0, Math.PI * 2);
       ctx.stroke();
-      // Subtle glow
-      ctx.shadowBlur = 6;
-      ctx.shadowColor = 'rgba(253, 224, 71, 0.5)';
-      ctx.stroke();
-      ctx.shadowBlur = 0;
 
       // Draw the plane icon (subtle, fits with design)
       ctx.save();
