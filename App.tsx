@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getNextMidnightTimezone, getPastTimezones, haveAllTimezonesCelebrated } from './services/timeService';
-import { fetchWeather, getTempColor } from './services/weatherService';
+import { getTempColor } from './services/weatherService';
+import { getTempWithFallback } from './services/metarService';
 import { CountdownState, FireworkEvent, TimezoneData } from './types';
 import Background from './components/Background';
 import CountdownDisplay from './components/CountdownDisplay';
@@ -74,15 +75,15 @@ const App: React.FC = () => {
     }
   }, [state]);
 
-  const handleNewYearTransition = async (finishedTimezone: any) => {
+  const handleNewYearTransition = (finishedTimezone: any) => {
     // 1. Trigger Screen Confetti
     setShowConfetti(true);
 
     // 2. Trigger World Map Firework (Big Burst)
     try {
         const { lat, lng } = finishedTimezone.coords;
-        const weather = await fetchWeather(lat, lng);
-        const color = getTempColor(weather.temperature);
+        const temp = getTempWithFallback(lat, lng);
+        const color = getTempColor(temp);
         
         const newFirework: FireworkEvent = {
             id: `${finishedTimezone.name}-${Date.now()}`,
