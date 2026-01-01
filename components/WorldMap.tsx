@@ -4,6 +4,7 @@ import { FireworkEvent, TimezoneData } from '../types';
 import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportCondition, WeatherCondition, WeatherIntensity } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
+import { fetchFlightData, calculateFlightProgress, FlightInfo, TRACKED_FLIGHTS } from '../services/flightService';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
@@ -122,40 +123,21 @@ const getWeatherConditionLabel = (condition: WeatherCondition, intensity: Weathe
   }
 };
 
-// Flight AC999: Montreal (YUL) to Puerto Vallarta (PVR)
-const FLIGHT_AC999 = {
+// Fallback flight data when AC999 is not in the air
+const FALLBACK_FLIGHT = {
   flightNumber: 'AC999',
+  callsign: 'ACA999',
   airline: 'Air Canada',
   aircraft: 'Boeing 737 MAX 8',
   origin: { icao: 'CYUL', name: 'Montreal-Trudeau', lat: 45.47, lng: -73.74 },
-  destination: { icao: 'MMSM', name: 'Puerto Vallarta', lat: 20.68, lng: -105.25 },
+  destination: { icao: 'MMPR', name: 'Puerto Vallarta', lat: 20.68, lng: -105.25 },
   departureTime: '09:00',
   arrivalTime: '13:15',
   duration: '5h 15m',
   distance: '3,650 km',
   flightAttendant: 'The Best Flight Attendant',
-  status: 'In Flight',
-};
-
-// Calculate current flight progress (simulated - plane moves across the route)
-const getFlightProgress = (): number => {
-  // Simulate flight progress based on time - cycles every 5 minutes for demo
-  const now = Date.now();
-  const cycleMs = 5 * 60 * 1000; // 5 minute cycle
-  return (now % cycleMs) / cycleMs;
-};
-
-// Interpolate position along great circle path
-const interpolatePosition = (
-  lat1: number, lng1: number,
-  lat2: number, lng2: number,
-  t: number
-): { lat: number; lng: number } => {
-  // Simple linear interpolation (good enough for this distance)
-  return {
-    lat: lat1 + (lat2 - lat1) * t,
-    lng: lng1 + (lng2 - lng1) * t,
-  };
+  status: 'Scheduled' as const,
+  position: null,
 };
 
 // Calculate heading/bearing between two points
@@ -187,7 +169,7 @@ interface HoverInfo {
 }
 
 interface FlightHoverInfo {
-  flight: typeof FLIGHT_AC999;
+  flight: FlightInfo;
   progress: number;
   x: number;
   y: number;
@@ -272,8 +254,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const [currentCountry, setCurrentCountry] = useState<CountryInfo | null>(null);
   const [flightHoverInfo, setFlightHoverInfo] = useState<FlightHoverInfo | null>(null);
   const [isFlightTooltipVisible, setIsFlightTooltipVisible] = useState(false);
+  const [liveFlights, setLiveFlights] = useState<Map<string, FlightInfo>>(new Map());
   const flightProgressRef = useRef(0);
   const planePositionRef = useRef<{ x: number; y: number; bearing: number } | null>(null);
+  const liveFlightsRef = useRef<Map<string, FlightInfo>>(new Map());
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Track newest timezone for celebration effect (using refs to avoid restarting animation loop)
@@ -364,10 +348,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       const distToPlane = Math.sqrt(dx * dx + dy * dy);
 
       if (distToPlane < 25) {
-        // Hovering over plane - show flight info
+        // Hovering over plane - show flight info (use live data or fallback)
+        const liveAC999 = liveFlightsRef.current.get('ACA999');
+        const flight = liveAC999 || FALLBACK_FLIGHT;
         setIsFlightTooltipVisible(true);
         setFlightHoverInfo({
-          flight: FLIGHT_AC999,
+          flight: flight as FlightInfo,
           progress: flightProgressRef.current,
           x: event.clientX,
           y: event.clientY
@@ -427,6 +413,20 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
     // Refresh METAR data every 30 minutes
     const interval = setInterval(loadMetar, 30 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // Fetch live flight data
+  useEffect(() => {
+    const loadFlights = async () => {
+      const flights = await fetchFlightData(TRACKED_FLIGHTS);
+      setLiveFlights(flights);
+      liveFlightsRef.current = flights;
+    };
+    loadFlights();
+
+    // Refresh flight data every 10 seconds (OpenSky rate limit)
+    const interval = setInterval(loadFlights, 10 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -859,25 +859,34 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         }
       }
 
-      // Draw flight path AC999: Montreal to Puerto Vallarta
-      const flight = FLIGHT_AC999;
-      const progress = getFlightProgress();
-      flightProgressRef.current = progress;
+      // Draw flight path AC999: Montreal to Puerto Vallarta (LIVE DATA)
+      const liveAC999 = liveFlightsRef.current.get('ACA999');
+      const flight = liveAC999 || FALLBACK_FLIGHT;
+      const isLive = flight.status === 'In Flight' && flight.position !== null;
 
       const originPos = latLngToCanvas(flight.origin.lat, flight.origin.lng);
       const destPos = latLngToCanvas(flight.destination.lat, flight.destination.lng);
-      const currentPos = interpolatePosition(
-        flight.origin.lat, flight.origin.lng,
-        flight.destination.lat, flight.destination.lng,
-        progress
-      );
-      const planeCanvasPos = latLngToCanvas(currentPos.lat, currentPos.lng);
 
-      // Calculate bearing for plane rotation
-      const bearing = calculateBearing(
-        flight.origin.lat, flight.origin.lng,
-        flight.destination.lat, flight.destination.lng
-      );
+      let planeCanvasPos: { x: number; y: number };
+      let bearing: number;
+      let progress: number;
+
+      if (isLive && flight.position) {
+        // Use real-time position from OpenSky
+        planeCanvasPos = latLngToCanvas(flight.position.latitude, flight.position.longitude);
+        bearing = flight.position.heading; // Real heading from transponder
+        progress = calculateFlightProgress(flight);
+      } else {
+        // Flight not in air - show at origin with 0 progress
+        planeCanvasPos = originPos;
+        bearing = calculateBearing(
+          flight.origin.lat, flight.origin.lng,
+          flight.destination.lat, flight.destination.lng
+        );
+        progress = 0;
+      }
+
+      flightProgressRef.current = progress;
 
       // Store plane position for hover detection
       planePositionRef.current = { x: planeCanvasPos.x, y: planeCanvasPos.y, bearing };
@@ -885,7 +894,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       // Draw the full route as a dashed line
       ctx.save();
       ctx.setLineDash([5, 5]);
-      ctx.strokeStyle = 'rgba(255, 200, 50, 0.3)';
+      ctx.strokeStyle = isLive ? 'rgba(255, 200, 50, 0.3)' : 'rgba(255, 200, 50, 0.15)';
       ctx.lineWidth = 2;
       ctx.beginPath();
       ctx.moveTo(originPos.x, originPos.y);
@@ -893,16 +902,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       ctx.stroke();
       ctx.setLineDash([]);
 
-      // Draw the traveled path as solid yellow line
-      ctx.strokeStyle = '#ffc832';
-      ctx.lineWidth = 3;
-      ctx.shadowBlur = 8;
-      ctx.shadowColor = '#ffc832';
-      ctx.beginPath();
-      ctx.moveTo(originPos.x, originPos.y);
-      ctx.lineTo(planeCanvasPos.x, planeCanvasPos.y);
-      ctx.stroke();
-      ctx.shadowBlur = 0;
+      // Draw the traveled path as solid yellow line (only if in flight)
+      if (isLive) {
+        ctx.strokeStyle = '#ffc832';
+        ctx.lineWidth = 3;
+        ctx.shadowBlur = 8;
+        ctx.shadowColor = '#ffc832';
+        ctx.beginPath();
+        ctx.moveTo(originPos.x, originPos.y);
+        ctx.lineTo(planeCanvasPos.x, planeCanvasPos.y);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
 
       // Draw origin and destination markers
       // Origin (Montreal)
@@ -918,7 +929,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       ctx.arc(destPos.x, destPos.y, 5, 0, Math.PI * 2);
       ctx.stroke();
 
-      // Draw the plane icon
+      // Draw the plane icon (brighter when live, dimmer when not in flight)
       ctx.save();
       ctx.translate(planeCanvasPos.x, planeCanvasPos.y);
       // Rotate to face direction of travel (bearing is from north, canvas rotation is from east)
@@ -926,8 +937,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
       // Draw plane shape (pointing right when rotation is 0)
       const planeSize = 10;
-      ctx.fillStyle = '#ffc832';
-      ctx.shadowBlur = 10;
+      ctx.fillStyle = isLive ? '#ffc832' : 'rgba(255, 200, 50, 0.5)';
+      ctx.shadowBlur = isLive ? 10 : 5;
       ctx.shadowColor = '#ffc832';
 
       // Plane body
@@ -1164,9 +1175,22 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 <span className="text-amber-400 font-bold text-lg">{flightHoverInfo.flight.flightNumber}</span>
                 <span className="text-white/60 text-sm">{flightHoverInfo.flight.airline}</span>
               </div>
-              <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-400 rounded-full">
-                {flightHoverInfo.flight.status}
-              </span>
+              <div className="flex items-center gap-2">
+                {flightHoverInfo.flight.position && (
+                  <span className="text-[10px] px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 rounded-full">
+                    LIVE
+                  </span>
+                )}
+                <span className={`text-xs px-2 py-0.5 rounded-full ${
+                  flightHoverInfo.flight.status === 'In Flight'
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : flightHoverInfo.flight.status === 'Landed'
+                    ? 'bg-blue-500/20 text-blue-400'
+                    : 'bg-amber-500/20 text-amber-400'
+                }`}>
+                  {flightHoverInfo.flight.status}
+                </span>
+              </div>
             </div>
 
             {/* Route */}
@@ -1218,6 +1242,24 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 <p className="text-white/80 text-xs">{flightHoverInfo.flight.distance}</p>
               </div>
             </div>
+
+            {/* Live flight data (altitude, speed) */}
+            {flightHoverInfo.flight.position && (
+              <div className="grid grid-cols-2 gap-2 text-center border-t border-cyan-400/20 pt-2 mb-3">
+                <div>
+                  <p className="text-[10px] text-cyan-400/60 uppercase">Altitude</p>
+                  <p className="text-cyan-300 text-xs font-medium">
+                    {Math.round(flightHoverInfo.flight.position.altitude * 3.28084).toLocaleString()} ft
+                  </p>
+                </div>
+                <div>
+                  <p className="text-[10px] text-cyan-400/60 uppercase">Ground Speed</p>
+                  <p className="text-cyan-300 text-xs font-medium">
+                    {Math.round(flightHoverInfo.flight.position.velocity * 1.944)} kts
+                  </p>
+                </div>
+              </div>
+            )}
 
             {/* Flight Attendant */}
             <div className="border-t border-white/10 pt-2">
