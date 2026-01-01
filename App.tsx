@@ -177,7 +177,10 @@ const App: React.FC = () => {
     <TemperatureProvider>
       <main className="relative h-screen w-screen flex flex-col font-sans overflow-hidden selection:bg-indigo-500/30">
         <Background />
-        <Fireworks trigger={showConfetti} brief={allCelebrated || haveAllTimezonesCelebrated()} />
+        {/* Only show confetti during countdown, not on post-celebration map view */}
+        {!(allCelebrated && !showUnityMessage) && (
+          <Fireworks trigger={showConfetti} brief={haveAllTimezonesCelebrated()} />
+        )}
 
         {/* Info button - subtle, in corner */}
         <button
