@@ -75,17 +75,11 @@ async function handleFlights(env: Env, params: URLSearchParams): Promise<Respons
     return jsonResponse({ error: 'No callsigns provided' }, 400);
   }
 
-  // Build OpenSky URL with auth
-  const openskyUrl = 'https://opensky-network.org/api/states/all?lamin=15&lomin=-115&lamax=55&lomax=-60';
-
-  const authHeader = 'Basic ' + btoa(`${env.OPENSKY_USERNAME}:${env.OPENSKY_PASSWORD}`);
+  // Build OpenSky URL with credentials in URL (their API prefers this)
+  const openskyUrl = `https://${encodeURIComponent(env.OPENSKY_USERNAME)}:${encodeURIComponent(env.OPENSKY_PASSWORD)}@opensky-network.org/api/states/all?lamin=15&lomin=-115&lamax=55&lomax=-60`;
 
   try {
-    const response = await fetch(openskyUrl, {
-      headers: {
-        'Authorization': authHeader,
-      },
-    });
+    const response = await fetch(openskyUrl);
 
     if (!response.ok) {
       // Pass through rate limit info if available
