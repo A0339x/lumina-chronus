@@ -18799,108 +18799,70 @@ const AIRPORTS: Airport[] = [
 ];
 
 
-// Hardcoded temperatures - auto-updated every 6 hours by GitHub Actions
-// Last updated: 2026-01-01T12:57:26.366Z
+// Hardcoded temperatures - auto-updated by GitHub Actions
+// Last updated: 2026-01-01T13:26:28.709Z
+// Coverage: 1200 airports
 const HARDCODED_TEMPS: Record<string, number> = {
-  // UTC+14 to UTC+12 - Pacific Islands & New Zealand
-  "NZAA": 19, "NZWN": 17, "NZCH": 14, "NZQN": 15, "NFFN": 27, "NFNA": 24, "UHPP": -3, "PLCH": 26, "NGTA": 27, "NGFU": 28, "NLWW": 28, "NSFA": 27, "NFTF": 27,
-
-  // UTC+11 - Solomon Islands, Vanuatu
-  "NVVV": 26, "AGGH": 28, "NWWW": 27, "UHMM": -16, "ANYN": 28, "PTKK": 29, "PTPN": 28,
-
-  // UTC+10 - Eastern Australia, Papua New Guinea, Micronesia
-  "YSSY": 15, "YMML": 14, "YBBN": 24, "YBCS": 24, "YBCG": 20, "AYPY": 15, "UHWW": -14, "PGUM": 28, "PGSN": 27, "PTRO": 29, "PWAK": 26,
-
-  // UTC+9:30 - Central Australia
-  "YPAD": 19, "YPDN": 28,
-
-  // UTC+9 - Japan, Korea
-  "RJTT": 6, "RJAA": 4, "RJBB": 7, "RKSI": -6, "RKSS": -9, "RKPK": -4, "RJCC": -12, "UEEE": -26,
-
-  // UTC+8 - China, Singapore, Philippines, Malaysia, Western Australia
-  "ZBAA": -4, "ZSPD": 5, "ZGGG": 13, "ZGSZ": 16, "VHHH": 18, "RCTP": 16, "WSSS": 26, "RPLL": 27, "WMKK": 27, "YPPH": 29, "ZMUB": -26, "UIII": -20,
-
-  // UTC+7 - Thailand, Vietnam, Indonesia
-  "VTBS": 29, "VVNB": 19, "VVTS": 26, "WIII": 26, "UNNT": -9, "UNKL": -2,
-
-  // UTC+6:30 - Myanmar
-  "VYYY": 26,
-
-  // UTC+6 - Bangladesh, Central Asia
-  "VGHS": 17, "UAAA": 0, "UACC": -10, "UTTT": 4, "UNOO": -13,
-
-  // UTC+5:45 - Nepal
-  "VNKT": 12,
-
-  // UTC+5:30 - India, Sri Lanka
-  "VIDP": 15, "VABB": 25, "VOBL": 25, "VECC": 19, "VOMM": 25, "VCBI": 27,
-
-  // UTC+5 - Pakistan
-  "OPKC": 24, "OPRN": 13, "OPLA": 14, "USSS": -10,
-
-  // UTC+4:30 - Afghanistan
-  "OAKB": 4,
-
-  // UTC+4 - UAE, Gulf, Caucasus, Indian Ocean
-  "OMDB": 22, "OMAA": 21, "OOMS": 23, "UBBB": 6, "UGGG": 6, "UDYZ": 0, "FIMP": 25, "FMEE": 27, "FSIA": 28, "VRMM": 27, "OOBR": 20,
-
-  // UTC+3:30 - Iran
-  "OIIE": 9, "OIMM": 9,
-
-  // UTC+3 - Moscow, East Africa, Middle East
-  "UUEE": -11, "UUDD": -10, "ULLI": -8, "LTFM": 2, "OERK": 23, "OEJN": 29, "ORBI": 17, "OTHH": 21, "OKBK": 21, "HKJK": 23, "HAAB": 23, "HTDA": 30, "FMMI": 24,
-
-  // UTC+2 - Eastern Europe, Southern Africa, Mediterranean Islands
-  "HECA": 20, "LGAV": 7, "LLBG": 16, "UKBB": -9, "LROP": 0, "EFHK": -11, "LBSF": 0, "FAOR": 24, "FACT": 27, "FVHA": 27, "LCLK": 17, "LCPH": 14, "LGIR": 10, "LGKR": 10, "LGSR": 9, "LGKO": 7, "LGRP": 9, "LMML": 13,
-
-  // UTC+1 - Central Europe, West Africa, Western Mediterranean Islands
-  "LFPG": 3, "EDDF": 3, "EDDM": 2, "LIRF": 11, "LEMD": 6, "LEBL": 12, "EHAM": 6, "EBBR": 4, "LOWW": 5, "EPWA": 1, "LKPR": 0, "LHBP": 3, "ESSA": 1, "EKCH": 4, "ENGM": -2, "LSZH": 1, "DNMM": 33, "DAAG": 17, "DTTA": 17, "LIEE": 14, "LIEO": 14, "LFKJ": 12, "LEIB": 14, "LEPA": 13, "LEMH": 12, "LICC": 12, "LICJ": 15,
-
-  // UTC+0 - UK, Portugal, West Africa, Canary Islands
-  "EGLL": 6, "EGKK": 5, "EIDW": 5, "LPPT": 12, "BIKF": 4, "DGAA": 31, "GOBD": 32, "GMMN": 22, "GCTS": 18, "GCXO": 18, "GCLP": 22, "GCLA": 19, "GCRR": 21, "GCFV": 23, "LPMA": 19, "EGJJ": 8, "EGJB": 8, "EGNS": 6, "EKVG": 0,
-
-  // UTC-1 - Cape Verde, Azores
-  "GVNP": 30, "GVSV": 23, "GVBA": 24, "LPAZ": 16, "LPHR": 15, "LPLA": 14,
-
-  // UTC-3 - Brazil, Argentina
-  "SBGR": 28, "SBGL": 34, "SBBR": 26, "SAEZ": 22, "SUMU": 25, "SCEL": 26, "SLLP": 9, "SGAS": 27,
-
-  // UTC-3:30 - Newfoundland
-  "CYYT": 2,
-
-  // UTC-4 - Atlantic Canada, Caribbean
-  "CYHZ": -1, "CYQM": -6, "CYFC": -8, "CYYG": -5, "CYQX": -2, "TJSJ": 23, "MDSD": 24, "SVMI": 28, "SBBV": 28, "TAPA": 26, "TBPB": 27, "TLPC": 27, "TGPY": 28, "TTPP": 28, "TNCC": 28, "TNCM": 26, "TFFR": 25, "TFFF": 26, "MYNN": 18, "MBPV": 25, "TIST": 26, "TKPK": 26, "TDPD": 23, "TVSV": 27, "TRPG": 25, "TQPF": 25, "MWCR": 23, "TXKF": 17,
-
-  // UTC-5 - Eastern US/Canada, Colombia, Peru
-  "KJFK": -5, "KLGA": -5, "KEWR": -4, "KORD": -11, "KATL": 1, "KMIA": 8, "KBOS": -2, "KDCA": -2, "KIAD": -3, "KPHL": -2, "KDTW": -12, "CYYZ": -14, "CYUL": -13, "CYOW": -17, "CYQB": -11, "CYQT": -26, "CYHM": -14, "CYFB": -3, "SKBO": 13, "SPJC": 18, "SEQM": 12, "MUHA": 16, "MKJP": 24, "MPTO": 26,
-
-  // UTC-6 - Central US, Mexico, Central America
-  "KDFW": 6, "KIAH": 4, "KAUS": 6, "KMSP": -13, "KSTL": -3, "KMSY": 4, "CYWG": -20, "CYQR": -13, "CYXE": -21, "MMMX": 7, "MMUN": 15, "MGGT": 12, "MHTG": 19, "MSSS": 22, "MNMG": 23, "MROC": 23,
-
-  // UTC-7 - Mountain US/Canada, Mexico
-  "KDEN": 5, "KPHX": 14, "KSLC": 1, "KABQ": 3, "KELP": 10, "KBOI": -2, "CYYC": -6, "CYEG": -8, "CYZF": -30, "CYXY": -24, "MMCU": 12, "MMHO": 16,
-
-  // UTC-8 - Pacific US/Canada
-  "KLAX": 15, "KSFO": 11, "KSEA": 1, "KSAN": 17, "KLAS": 8, "KPDX": 4, "CYVR": 3, "CYYJ": 3, "CYLW": -3, "MMTJ": 16,
-
-  // UTC-9 - Alaska
-  "PANC": -9, "PAFA": -37, "PAJN": 0,
-
-  // UTC-10 - Hawaii, Tahiti, Cook Islands
-  "PHNL": 23, "PHOG": 23, "PHKO": 26, "PHLI": 20, "NTAA": 27, "NTTB": 26, "NCAI": 26,
-
-  // UTC-11 - American Samoa, Niue
-  "NSTU": 28, "NIUE": 27, "PMDY": 19,
-
-  // Remote South Atlantic
-  "SFAL": 9, "FHAW": 24, "FHSH": 20,
-
-  // Remote South Pacific
-  "SCIP": 21, "NCRG": 26,
-
-  // French Southern Territories
-  "FMCZ": 30, "FMCH": 31,
-
+  "OAMS": 6, "KQSP": 6, "KQML": 6, "OABN": 2, "OAPJ": -9, "KQKP": -3, "KQQN": 10, "OAQN": 10, "OAQD": 5, "EQBF": 4, "OAFZ": 4, "OAEM": -2, "OAEK": 6, "OADZ": -2, "OAQM": -14, "OAHN": 4, "OARZ": -1, "OASN": -5, "OAYW": 4, "OAZB": -17,
+  "KQKG": 8, "OABG": 7, "EQBQ": 1, "OARM": 10, "OAFR": 10, "KQAR": 11, "OASD": 8, "OAGL": 9, "OAAK": 7, "OAMN": 6, "OAQR": 4, "OADD": 6, "KQMH": 6, "OAMK": 0, "KQRY": -4, "OAGN": -7, "OACC": -5, "OAGM": -1, "OALL": -4, "OATW": 3,
+  "OAYL": -4, "OAKJ": 8, "OAOO": 12, "OABT": 10, "KQXT": 11, "OADY": 11, "OAEQ": 7, "OAOB": 7, "OAHR": 8, "OATD": 10, "OASG": 5, "OAQQ": 9, "OAPG": -8, "OAKB": 1, "OASK": 4, "KQSF": 2, "OASB": 9, "KQHN": 9, "OAKN": 9, "KQDP": 6,
+  "OAUZ": 4, "EQBA": 4, "OAAS": 6, "KQVE": 4, "OALN": 11, "OALG": 2, "EQBP": 2, "OAGA": 13, "OAJL": 13, "OABK": 13, "OAZJ": 11, "OAZG": 11, "OANZ": 11, "EQBI": 2, "OATN": 7, "KQSA": 3, "OAJS": 4, "OAIX": 3, "OAGZ": 1, "KQOX": 0,
+  "KQBR": 3, "OAKS": 7, "KQDM": 0, "OASW": 2, "KQSR": 1, "OASA": 1, "OAOG": -1, "OADW": 0, "OADF": -3, "OAKR": 8, "OAKG": 5, "OART": 2, "OATQ": 5, "OAYQ": 6, "OABD": -11, "OAHJ": -13, "KQQS": -1, "OAKT": 4, "OAMY": 4, "KQLT": 4,
+  "OAQA": 4, "FNAM": 26, "FNBJ": 33, "FNBB": 28, "FNBG": 28, "FNCT": 25, "FNCR": 34, "FNCL": 34, "FNGD": 31, "FNLB": 25, "FNAL": 24, "FNKU": 23, "FNCO": 25, "FNCA": 27, "FNCV": 27, "FNJB": 30, "FNLC": 30, "FNMG": 27, "FNME": 27, "FNGI": 29,
+  "FNXA": 29, "FNCU": 27, "FNKR": 27, "FNMU": 25, "FNPA": 26, "FNQA": 26, "FNSU": 25, "FNWK": 29, "FNBD": 26, "FNHU": 25, "FNLO": 24, "FNCD": 25, "FNJA": 26, "FNUB": 23, "FNMT": 27, "FNQL": 33, "FNTT": 24, "FNCF": 29, "FNCX": 26, "FNCH": 28,
+  "FNDO": 28, "FNDU": 27, "FNLM": 31, "FNLK": 26, "FNLZ": 29, "FNZG": 27, "FNCE": 25, "FNSA": 25, "FNLU": 27, "FNAN": 27, "FNCP": 29, "FNMA": 27, "FNCZ": 29, "FNUA": 25, "FNUE": 26, "FNBL": 28, "FNMO": 24, "FNTO": 31, "FNMQ": 26, "FNNG": 29,
+  "FNUG": 31, "FNBC": 30, "FNNI": 33, "FNZE": 27, "FNSO": 27, "TQPF": 25, "LAKV": 8, "LAKO": 1, "LAAA": 7, "LAKU": 3, "LAGJ": 6, "LASK": 4, "LASR": 10, "LAFK": 0, "LATI": 7, "LAVL": 9, "MAUA": 28, "TNCA": 28, "TNCM": 26, "TNCC": 28,
+  "TNCB": 28, "TNCS": 26, "TNCE": 26, "OMBK": 21, "OMRJ": 22, "OMAY": 19, "OMDL": 19, "OMQF": 19, "OMNK": 21, "OMSN": 21, "OMBY": 20, "OMAE": 21, "OMAM": 21, "OMAA": 21, "OMAD": 21, "OMEF": 21, "OMAL": 21, "KQGX": 21, "OMAH": 19, "OMAR": 19,
+  "OMAC": 21, "OMAB": 20, "OMAS": 20, "OMAF": 21, "OMAJ": 20, "OMAG": 21, "OMAQ": 19, "OMSM": 20, "OMAZ": 20, "OMDW": 21, "OMDM": 22, "OMDB": 22, "OMFJ": 24, "OMRS": 22, "OMRK": 22, "OMSJ": 21, "OMUQ": 22, "SASO": 28, "SASR": 31, "SASC": 23,
+  "SASA": 23, "SAST": 29, "SAZA": 21, "SAZB": 25, "SAEM": 20, "SAZJ": 20, "SAZI": 22, "SAZC": 21, "SADP": 24, "SAEZ": 23, "SAET": 24, "SAER": 24, "SADO": 24, "SAZD": 21, "SADD": 24, "SAEF": 23, "SAEU": 23, "SAAJ": 21, "SADL": 23, "SAEL": 22,
+  "SAZM": 20, "SADJ": 24, "SADZ": 23, "SADR": 24, "SADG": 23, "SADM": 24, "SAZO": 21, "SAZX": 22, "SAZF": 22, "SAZP": 23, "SAAN": 25, "SAZE": 22, "SAAI": 23, "SADQ": 23, "SAAA": 25, "SADF": 24, "SADS": 23, "SAZL": 21, "SAZT": 22, "SAZH": 23,
+  "SAZV": 20, "SABA": 24, "SABE": 24, "SABM": 24, "SAOU": 32, "SAOS": 28, "SAOR": 28, "SAAC": 32, "SAAG": 28, "SAAP": 31, "SAAM": 27, "SAAU": 33, "SACP": 31, "SANO": 23, "SACT": 27, "SANL": 26, "SANR": 28, "SACQ": 31, "SANH": 28, "SANE": 29,
+  "SARS": 31, "SARR": 30, "SARU": 30, "SARD": 30, "SARE": 30, "SARV": 31, "SAMJ": 23, "SANU": 31, "SANC": 28, "SANI": 24, "SAEA": 24, "SAZG": 25, "SAZU": 25, "SAZR": 26, "SAMC": 13, "SAMA": 31, "SAMP": 33, "SAMM": 22, "SAMK": 31, "SAMF": 29,
+  "SAMV": 29, "SAMQ": 31, "SAME": 29, "SAML": 16, "SAMS": 29, "SAMI": 30, "SAMR": 29, "SAMU": 20, "SAMH": 19, "SATI": 21, "SAZW": 25, "SATD": 25, "SARI": 25, "SATO": 25, "SARP": 27, "SATC": 26, "SARF": 26, "SATK": 30, "SAHE": 23, "SAHC": 26,
+  "SAVA": 24, "SAZY": 24, "SAHZ": 24, "SAZK": 20, "SAVB": 24, "SAHR": 24, "SAVQ": 21, "SAZN": 29, "SAZQ": 25, "SAVO": 27, "SAZS": 21, "SAVS": 23, "SAVV": 25, "SANW": 32, "SATR": 31, "SAAR": 29, "SAFR": 33, "SAAV": 32, "SAFS": 34, "SANT": 28,
+  "SAWM": 18, "SAVR": 16, "SAVF": 15, "SAVU": 15, "SAVC": 15, "SAVD": 21, "SAVE": 19, "SAWS": 18, "SAVP": 18, "SAVY": 21, "SAVM": 17, "SAVT": 22, "SAWE": 10, "SAWL": 9, "SAWO": 7, "SAWH": 7, "SARG": 30, "SARC": 29, "SATU": 31, "SATG": 31,
+  "SARO": 29, "SARM": 31, "SARL": 31, "SATM": 31, "SACN": 25, "SACG": 30, "SACF": 30, "SACU": 30, "SACA": 32, "SACO": 30, "SACE": 32, "SACD": 31, "SAOE": 33, "SACR": 28, "SACC": 30, "SAOL": 25, "SACL": 32, "SAOM": 30, "SACI": 31, "SAOC": 30,
+  "SACS": 32, "SAOD": 31, "SACM": 30, "SACV": 30, "SASJ": 26, "SASQ": 13, "SASL": 9, "SAWC": 13, "SAWT": 8, "SAWR": 16, "SAWG": 11, "SAWA": 13, "SAVH": 17, "SAWP": 17, "SAWD": 13, "SAWJ": 12, "SAWU": 12, "UDDD": -1, "UDYE": 0, "UDSG": -2,
+  "UDYZ": -1, "NSTU": 28, "NSFQ": 27, "NSAS": 26, "SCBO": 3, "SCBG": 3, "NZPG": 0, "SAYB": -6, "SAYE": 0, "EGAH": -1, "SCBP": 0, "SAYJ": 3, "SAWB": -1, "SAWZ": 1, "NZIR": 1, "NZCM": 3, "NZFX": 0, "NZWD": 3, "SAYO": -1, "EGAR": 2,
+  "SAYS": 3, "NZSP": -27, "ENOE": -4, "EGAT": -8, "SCRM": 1, "TAPB": 27, "MANU": 26, "TAPA": 26, "TAPT": 27, "TAPH": 27, "KXYK": 26, "TKPK": 26, "YABR": 30, "YBLP": 24, "YBBX": 25, "YCTN": 11, "YMYU": 18, "YMET": 26, "YCRE": 12, "YTPK": 24,
+  "YGGI": 24, "YHEC": 22, "YKWA": 30, "YKCY": 20, "YKDN": 26, "YLYK": 18, "YMMO": 16, "YLMU": 24, "YMAE": 29, "YNEY": 25, "YOCN": 23, "YPNA": 23, "YVAL": 11, "YTUY": 25, "YTYH": 21, "YWCH": 15, "YMOD": 11, "YWGM": 26, "YWKS": -1, "YSMO": 12,
+  "YSHO": 12, "YSCB": 12, "YJBY": 13, "YPEC": 19, "YMAY": 21, "YARM": 16, "YSBC": 13, "YBNA": 21, "YBRN": 23, "YBAD": 21, "YBYL": 20, "YBTH": 13, "YBID": 10, "YBOM": 13, "YBMI": 29, "YBKE": 26, "YBRW": 26, "YPBH": 22, "YBHI": 23, "YCMH": 20,
+  "YSCN": 13, "YCAS": 22, "YCNK": 18, "YCBA": 24, "YCDE": 11, "YCFS": 19, "YSCH": 18, "YCBR": 26, "YCDO": 23, "YCAH": 16, "YCOM": 9, "YCBB": 17, "YCNM": 24, "YCTM": 15, "YCOR": 22, "YCWR": 16, "YCUA": 17, "YDAL": 21, "YDLQ": 19, "YDOC": 19,
+  "YSDU": 19, "YEVD": 21, "YFDN": 18, "YFBS": 21, "YGIL": 18, "YGLI": 17, "YGDA": 29, "YGLB": 11, "YGFN": 21, "YGTH": 22, "YGDO": 12, "YGDH": 19, "YHAE": 14, "YHAY": 23, "YHLS": 22, "YHBK": 20, "YSHW": 15, "YIVL": 19, "YIVO": 24, "YJER": 21,
+  "YJIN": 7, "YKAT": 9, "YKMP": 19, "YLCG": 23, "YKEP": 22, "YLRD": 28, "YLIS": 22, "YLHI": 20, "YLOH": 25, "YMND": 18, "YMER": 12, "YPET": 23, "YMIG": 8, "YMOR": 29, "YMRY": 12, "YMDG": 15, "YMGI": 29, "YMUR": 21, "YNBR": 25, "YNAR": 20,
+  "YNRM": 20, "YNRH": 20, "YBBF": 20, "ASNF": 21, "YSNF": 21, "YSNW": 11, "YNYN": 23, "YOCA": 19, "YORG": 10, "YPKS": 19, "YLMQ": 19, "YPFT": 10, "YPCE": 23, "YPMQ": 19, "YQDI": 18, "YGNB": 13, "YSRI": 14, "YRSH": 15, "YRNS": 16, "YRPA": 16,
+  "YSCO": 17, "YSGT": 18, "YSMB": 14, "YSGR": 21, "YSWB": 21, "YSSR": 16, "YSSX": 14, "YSCA": 16, "YSRF": 16, "YSBK": 15, "YSSY": 15, "YSTW": 21, "YTRE": 20, "YTEM": 18, "YTFD": 21, "YLKS": 20, "YTIB": 26, "YTLP": 25, "YTOC": 19, "YTWN": 20,
+  "YTOT": 21, "YTMU": 18, "YSWG": 18, "YWLG": 26, "YWAG": 27, "YWRL": 25, "YWKW": 18, "YWVA": 16, "YWRN": 21, "YWBN": 12, "YWEL": 18, "YWTO": 23, "YWWL": 19, "YWST": 16, "YWNT": 16, "YWHC": 24, "YWCA": 25, "YWLM": 19, "YSHL": 12, "YWOL": 12,
+  "GLSV": 27, "GLVA": 29, "GLMC": 28, "GLRB": 28, "GLMR": 26, "GLCP": 27, "GLNA": 27, "GLSK": 27, "GLBU": 27, "GLGE": 27, "HLAG": 15, "HLWD": 17, "HLBS": 17, "HLMJ": 14, "HLFX": 20, "HLHN": 12, "HLHS": 13, "HLHB": 18, "HLMD": 21, "HLML": 19,
+  "HLRG": 20, "HLSH": 18, "HLSM": 20, "HLTS": 20, "HLLM": 17, "HLUB": 18, "HLZT": 19, "HLGT": 19, "HLTK": 16, "HLLB": 15, "HLBK": 15, "HLTQ": 15, "HLTD": 15, "HLLQ": 10, "HLHM": 12, "HLNM": 13, "HLZN": 13, "HLLT": 17, "HLDB": 20, "HLFD": 18,
+  "HLSB": 20, "HLUF": 20, "HLON": 18, "HLZA": 19, "HLKF": 22, "HLBW": 17, "HLMS": 16, "HLWF": 15, "HLZW": 17, "HLLS": 18, "HLRA": 16, "HLSD": 18, "HLGD": 17, "HLNF": 18, "HLGS": 17, "HLRF": 17, "HLTG": 18, "HLNC": 16, "HLAB": 16, "HLGN": 15,
+  "HLAM": 18, "HLBD": 20, "HLFL": 20, "HLGL": 20, "HLMB": 16, "HLNR": 20, "HLZG": 20, "HLSA": 19, "HLWA": 18, "HLZU": 15, "TLPC": 27, "TVSV": 27, "TLPL": 27, "VCRI": 26, "VCCT": 25, "VCHI": 26, "VCCW": 26, "VCCB": 26, "VCCG": 25, "VCCJ": 25,
+  "VCCV": 24, "VCCA": 25, "VCCH": 25, "VCCK": 27, "VCCS": 24, "VCBI": 27, "VCCC": 28, "VCCN": 28, "FXSM": 20, "FXLR": 27, "FXPG": 19, "FXSS": 19, "FXMF": 26, "FXKY": 20, "FXKR": 20, "FXLS": 21, "FXMH": 26, "FXNK": 24, "FXNH": 21, "FXQG": 24,
+  "FXLK": 16, "FXQN": 17, "FXSE": 15, "FXSK": 25, "FXTB": 19, "FXLT": 13, "FXML": 20, "FXMK": 22, "FXTK": 19, "FXBB": 20, "FXKA": 19, "FXKB": 19, "FXMN": 21, "FXMS": 19, "FXMT": 18, "FXMV": 18, "FXMA": 15, "FXMP": 16, "FXSH": 17, "FXST": 19,
+  "FXTA": 20, "FXMM": 27, "FXMU": 27, "EYAL": -5, "EYDR": -5, "EYKT": -4, "EYKL": -3, "EYNE": -1, "EYNI": -1, "EYND": -1, "EYPA": -2, "EYSI": -3, "EYKG": -5, "EYKA": -5, "EYKS": -5, "EYPR": -5, "EYRU": -5, "EYMM": -5, "EYBI": -6, "EYPP": -6,
+  "EYPN": -6, "EYPI": -6, "EYRO": -6, "EYKP": -6, "EYNA": -5, "EYSB": -6, "EYSE": -6, "EYSA": -6, "EYTR": -4, "EYTL": -4, "EYMA": -4, "EYMO": -7, "EYUT": -6, "EYZA": -7, "EYCA": -6, "EYIG": -8, "EYVK": -7, "EYPH": -6, "EYVP": -6, "EYRD": -6,
+  "EYVN": -7, "EYHM": -7, "EYVL": -7, "EYVC": -7, "EYVA": -6, "EYVI": -6, "ELML": 26, "ELNT": 0, "ELUS": 1, "ELET": 1, "ELEA": 0, "ELMD": 0, "ELLK": 0, "ELLZ": 1, "ELLC": 0, "ELLX": 0, "EVCJ": -8, "EVJA": -6, "EVJC": -5, "EVHN": -5,
+  "EVHA": -6, "EVAH": -6, "EVLU": -7, "EVCS": -7, "EVKM": -7, "EVMP": -7, "EVRR": -6, "EVNO": -4, "EVIA": -4, "EVSM": -5, "EVLI": -6, "EVNA": -8, "EVCA": -6, "EVDA": -7, "EVAP": -6, "EVEA": -6, "EVLA": -3, "EVPA": -6, "EVGA": -6, "EVRA": -5,
+  "EVAD": -6, "EVRS": -6, "EVTA": -6, "EVVA": -4, "VMMH": 16, "VMMC": 17, "TFFG": 26, "GMTT": 18, "GMTN": 17, "GMMY": 20, "GMFA": 19, "GPEY": 20, "GMSL": 20, "GMFG": 18, "GMFT": 17, "GMFO": 18, "GMMP": 18, "GMMJ": 21, "GMMB": 22, "GMMK": 18,
+  "GMMD": 21, "GMAA": 25, "GMAD": 25, "GMMO": 24, "GMAZ": 19, "GMTA": 17, "GMFB": 14, "GMMM": 23, "GMMN": 23, "GMFF": 18, "GMAG": 24, "GMMX": 22, "GMMW": 18, "GMFN": 18, "GMMZ": 15, "GFEZ": 19, "GMMS": 23, "GMMF": 24, "GMAT": 25, "GMFZ": 17,
+  "GMMC": 23, "GMMT": 23, "GMFK": 15, "GMFI": 13, "GMFM": 20, "GMMI": 25, "GMME": 21, "LNMC": 12, "LUCM": -2, "LUKK": -1, "LUUU": -1, "LUCH": -1, "LUKV": -2, "LUTG": -1, "LUBM": -2, "LUKH": -2, "LUBL": -2, "LUSR": -2, "LUKE": -1, "LUTR": -2,
+  "LUCL": -1, "FMMM": 24, "FMMD": 24, "FMMZ": 26, "FMMJ": 27, "FMMP": 26, "FMMQ": 26, "FMMH": 27, "FMNC": 29, "FMNR": 29, "FMMS": 28, "FMMT": 26, "FMMY": 27, "FMNJ": 30, "FMNE": 29, "FMNZ": 29, "FMND": 24, "FMNH": 29, "FMNA": 26, "FMNN": 28,
+  "FMNS": 28, "FMNV": 27, "FMSA": 28, "FMSG": 28, "FMSF": 25, "FMSI": 26, "FMSK": 27, "FMSM": 28, "FMSO": 29, "FMSU": 28, "FMNL": 28, "FMMG": 29, "FMNW": 31, "FMNF": 31, "FMNQ": 29, "FMMO": 29, "FMNM": 29, "FMNP": 31, "FMNX": 33, "FMMR": 31,
+  "FMNG": 32, "FMNO": 31, "FMMU": 28, "FMNT": 29, "FMMA": 21, "FMMI": 24, "FMME": 21, "FMMX": 26, "FMSY": 31, "FMMK": 31, "FMSZ": 31, "FMSL": 32, "FMML": 29, "FMSB": 32, "FMSV": 31, "FMSE": 29, "FMSD": 27, "FMMC": 32, "FMSC": 31, "FMSJ": 30,
+  "FMMN": 32, "FMSR": 28, "FMMV": 28, "FMSN": 30, "FMST": 28, "VRMR": 29, "VRMU": 27, "VRMD": 27, "VRMH": 27, "VREI": 27, "VRMT": 28, "VRMK": 28, "VRMO": 28, "VRDA": 26, "VRMF": 27, "VRMM": 27, "VRNT": 28, "VRMV": 27, "VRGN": 29, "VRMG": 29,
+  "MMAS": 6, "MMTJ": 16, "MMES": 16, "MMGR": 16, "MMCD": 19, "MMGD": 19, "MMML": 10, "MMSF": 11, "MMSL": 25, "MMDA": 17, "MMLP": 17, "MMLT": 17, "MMPT": 19, "MMPP": 20, "MMPL": 20, "MMSD": 20, "MMCP": 19, "MMCE": 21, "MMCU": 11, "MMCS": 10,
+  "MMGA": 6, "MMNC": 7, "MMCG": 7, "MMTB": 16, "MMTG": 16, "MMCO": 14, "MMPQ": 19, "MMSC": 14, "MMTP": 26, "MMFR": 7, "MMCC": 6, "MMMV": 10, "MMPG": 6, "MMIO": 12, "MMTC": 9, "MMIA": 20, "MMZO": 26, "MMMX": 4, "MMDO": 8, "MMAA": 26,
+  "MMCH": 15, "MMZH": 28, "MMPD": 28, "MMCY": 7, "MMLO": 7, "MMPC": 6, "MMTL": 5, "MMGL": 13, "MMPR": 26, "MMZP": 12, "KXCN": 19, "MMJC": 5, "MMSM": 4, "MMTO": 3, "MMAG": 18, "MMLC": 22, "MMMM": 6, "MMPN": 11, "MMZM": 7, "MMCB": 12,
+  "MMTQ": 13, "MMSB": 24, "MMEP": 19, "MMAL": 8, "MMTY": 9, "MMMY": 9, "MMAN": 8, "MMBT": 19, "MMIT": 20, "MMLB": 16, "MMOX": 7, "MMPS": 26, "MMSZ": 23, "MMPO": 18, "MMPB": 6, "MMHC": 10, "MMQT": 5, "MMUN": 15, "MMCM": 16, "MMCZ": 20,
+  "MMIM": 16, "MMTU": 14, "MMCL": 18, "MMLM": 17, "MMZT": 24, "MMFO": 24, "MMMZ": 24, "MMSP": 9, "MMTN": 10, "MMCA": 9, "MMCN": 17, "MMGM": 16, "MMHO": 17, "MMNG": 12, "MMPE": 11, "MMVA": 19, "MMCV": 10, "MMMA": 12, "MMNL": 8, "MMRX": 9,
+  "MMTM": 14, "MMTA": 7, "MMMT": 19, "MMJA": 13, "MMNU": 13, "MMPA": 11, "MMTX": 13, "MMVR": 17, "MMCT": 15, "MMID": 16, "MMMD": 16, "MMZC": 6, "KWJP": 28, "PKWA": 28, "PKMJ": 28, "PMAJ": 28, "PWAK": 26, "PKMA": 27, "PKRO": 27, "GAKD": 35,
+  "GAMN": 35, "GASD": 37, "GAML": 33, "GASY": 36, "GASO": 34, "GATY": 32, "GAGR": 29, "GATN": 25, "GAGL": 28, "GABV": 34, "GABB": 34, "GABS": 34, "GADA": 33, "GAFD": 35, "GAKN": 33, "DEBB": 34, "GANK": 32, "GAAO": 33, "GABR": 29, "GAGO": 32,
+  "GAGM": 30, "GAKL": 29, "GAMK": 33, "GATS": 26, "GATB": 28, "GABF": 36, "GAKY": 34, "GAKA": 35, "GAKT": 34, "GANR": 32, "DEYE": 34, "GAYE": 34, "GABD": 35, "GADZ": 32, "GAHB": 32, "GAMB": 33, "GANF": 30, "GAKM": 32, "GAMA": 32, "GASN": 32,
+  "GASG": 31, "GABG": 35, "GAKO": 33, "GASK": 35, "LMML": 13, "LMMM": 14, "LMMG": 14, "VYKH": 20, "VYBO": 24, "VYCZ": 22, "VYMG": 23, "VYNT": 23, "VYHT": 24, "VYMA": 25, "VYSB": 13, "VYFS": 8, "VYLO": 19, "VYCI": 27, "VYPI": 29, "VYPN": 25,
+  "VYPY": 24, "VYTO": 23, "VYPE": 17, "VYBM": 19, "VYLN": 16, "VYMK": 19, "VYNP": 17, "VYNM": 13, "VYPT": 13, "VYTN": 18, "VYLK": 17, "VYPA": 24, "VYPP": 22, "VYAS": 17, "VYBG": 22, "VYMD": 22, "VYML": 22, "VYST": 22, "VYGG": 22, "VYKU": 18,
+  "VYLY": 23, "VYMW": 24, "VYPU": 22, "VYPK": 20, "VYSA": 18, "VYSO": 18, "VYHN": 18, "VYMM": 24, "VYYE": 25, "VYAN": 21, "VYGW": 26, "VYKP": 25, "VYMN": 26, "VYMU": 22, "VYSW": 24, "VYTD": 26, "VYHL": 18, "VYKL": 13, "VYKI": 14, "VYMY": 21,
+  "VYPB": 19, "VYPL": 18, "VYSL": 21, "VYHH": 15, "VYKG": 14, "VYLS": 14, "VYMO": 19, "VYMH": 17, "VYMS": 19, "VYMT": 18, "VYMP": 16, "VYMI": 14, "VYNS": 14, "VYNU": 13, "VYTL": 17, "VYTY": 14, "VYBP": 28, "VYDW": 27, "VYKT": 28, "VYME": 27,
+  "VYPW": 28, "VYHB": 25, "VYYY": 26, "ZMUB": -26, "ZMUH": -29, "ZMDA": -20, "ZMHG": -10, "ZMMN": -25, "ZMKD": -19, "ZMBS": -20, "ZMUG": -30, "ZMSF": -21, "ZMCK": -23, "ZMBU": -18, "ZMKB": -10, "ZMGT": -12, "ZMTT": -12, "ZMDZ": -10, "ZMAH": -13, "ZMHH": -10,
 };
 
 // Convert to Map for faster lookups
