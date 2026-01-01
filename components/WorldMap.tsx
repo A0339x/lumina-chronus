@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, memo, useState, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
-import { Loader2 } from 'lucide-react';
 import { FireworkEvent, TimezoneData } from '../types';
 import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 
-const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-10m.json";
+const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
 // Convert temperature (Celsius) to color
 // Range: -40°C (blue) to +40°C (red)
@@ -97,18 +96,35 @@ const MAP_CENTER_LAT = 20;
 // react-simple-maps default SVG dimensions
 const SVG_WIDTH = 800;
 const SVG_HEIGHT = 600;
+const SVG_ASPECT = SVG_WIDTH / SVG_HEIGHT;
 
 // Convert screen coordinates to lat/lng based on equirectangular projection
-// Note: Map stretches to fill container (width/height 100%), so we use simple stretching
 const screenToLatLng = (
   screenX: number,
   screenY: number,
   containerWidth: number,
   containerHeight: number
 ): { lat: number; lng: number } => {
-  // Convert screen coords to SVG coords (simple stretch - no aspect ratio preservation)
-  const svgX = (screenX / containerWidth) * SVG_WIDTH;
-  const svgY = (screenY / containerHeight) * SVG_HEIGHT;
+  // SVG preserves aspect ratio (xMidYMid meet) - calculate actual rendered size
+  const containerAspect = containerWidth / containerHeight;
+
+  let svgX, svgY;
+
+  if (containerAspect > SVG_ASPECT) {
+    // Container is wider than SVG - SVG fitted to height, centered horizontally
+    const scale = containerHeight / SVG_HEIGHT;
+    const renderedWidth = SVG_WIDTH * scale;
+    const offsetX = (containerWidth - renderedWidth) / 2;
+    svgX = ((screenX - offsetX) / renderedWidth) * SVG_WIDTH;
+    svgY = (screenY / containerHeight) * SVG_HEIGHT;
+  } else {
+    // Container is taller than SVG - SVG fitted to width, centered vertically
+    const scale = containerWidth / SVG_WIDTH;
+    const renderedHeight = SVG_HEIGHT * scale;
+    const offsetY = (containerHeight - renderedHeight) / 2;
+    svgX = (screenX / containerWidth) * SVG_WIDTH;
+    svgY = ((screenY - offsetY) / renderedHeight) * SVG_HEIGHT;
+  }
 
   // For d3 geoEquirectangular projection:
   // scale = pixels per radian, so pixels per degree = scale * (π/180)
@@ -333,54 +349,20 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
   // Create land mask from the hidden mask map
   useEffect(() => {
-    let retryCount = 0;
-    const maxRetries = 20; // Allow up to 10 seconds for large maps to load
-
     const createLandMask = () => {
       const maskMap = document.getElementById('land-mask-map');
       const maskCanvas = maskCanvasRef.current;
-      if (!maskMap || !maskCanvas || !containerRef.current) {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(createLandMask, 500);
-        }
-        return;
-      }
+      if (!maskMap || !maskCanvas || !containerRef.current) return;
 
       const width = containerRef.current.offsetWidth;
       const height = containerRef.current.offsetHeight;
 
       // Skip if container has no dimensions yet
       if (width === 0 || height === 0) {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(createLandMask, 500);
-        }
+        // Retry after a short delay
+        setTimeout(createLandMask, 100);
         return;
       }
-
-      // Find the SVG inside the mask map
-      const svg = maskMap.querySelector('svg');
-      if (!svg) {
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(createLandMask, 500);
-        }
-        return;
-      }
-
-      // Check if geography paths have loaded (important for large 10m files)
-      const paths = svg.querySelectorAll('path');
-      if (paths.length === 0) {
-        console.log('[LandMask] Waiting for geography to load... attempt', retryCount + 1);
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(createLandMask, 500);
-        }
-        return;
-      }
-
-      console.log('[LandMask] Found', paths.length, 'paths, creating mask...');
 
       maskCanvas.width = width;
       maskCanvas.height = height;
@@ -388,28 +370,20 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       const ctx = maskCanvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
 
+      // Find the SVG inside the mask map
+      const svg = maskMap.querySelector('svg');
+      if (!svg) return;
+
       // Clone and modify SVG for mask
       const svgClone = svg.cloneNode(true) as SVGSVGElement;
-
-      // Set viewBox to match react-simple-maps default coordinate system
-      svgClone.setAttribute('viewBox', '0 0 800 600');
       svgClone.setAttribute('width', String(width));
       svgClone.setAttribute('height', String(height));
-      // Stretch to fill container (must match how sparkles are positioned)
-      svgClone.setAttribute('preserveAspectRatio', 'none');
-      // Remove any inline styles that might interfere
-      svgClone.removeAttribute('style');
 
       // Make all paths white on black for clear land detection
-      const clonedPaths = svgClone.querySelectorAll('path');
-      clonedPaths.forEach(path => {
-        // Set both attributes and inline styles to ensure white fill
+      const paths = svgClone.querySelectorAll('path');
+      paths.forEach(path => {
         path.setAttribute('fill', '#FFFFFF');
         path.setAttribute('stroke', '#FFFFFF');
-        path.setAttribute('stroke-width', '0.5');
-        // Override any CSS styles
-        (path as HTMLElement).style.fill = '#FFFFFF';
-        (path as HTMLElement).style.stroke = '#FFFFFF';
       });
 
       const svgData = new XMLSerializer().serializeToString(svgClone);
@@ -424,15 +398,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         const imageData = ctx.getImageData(0, 0, width, height);
         setLandMask(imageData);
         URL.revokeObjectURL(url);
-        console.log('[LandMask] Created successfully:', width, 'x', height);
       };
       img.onerror = () => {
-        console.error('[LandMask] Failed to load image, retrying...');
+        console.error('Failed to load land mask image');
         URL.revokeObjectURL(url);
-        if (retryCount < maxRetries) {
-          retryCount++;
-          setTimeout(createLandMask, 500);
-        }
       };
       img.src = url;
     };
@@ -468,7 +437,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     };
 
     // Convert lat/lng to canvas coordinates matching the map's projection
-    // Note: Land mask stretches SVG to fill container, so we do the same here
     const latLngToCanvas = (lat: number, lng: number): { x: number; y: number } => {
       // Match the map's d3 geoEquirectangular projection
       const pixelsPerDegree = MAP_SCALE * (Math.PI / 180);
@@ -477,9 +445,23 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       const svgX = (SVG_WIDTH / 2) + (lng - MAP_CENTER_LNG) * pixelsPerDegree;
       const svgY = (SVG_HEIGHT / 2) - (lat - MAP_CENTER_LAT) * pixelsPerDegree;
 
-      // Stretch SVG coords to canvas coords (matching land mask which stretches to fill)
-      const canvasX = (svgX / SVG_WIDTH) * canvas.width;
-      const canvasY = (svgY / SVG_HEIGHT) * canvas.height;
+      // Convert SVG coords to canvas coords (accounting for aspect ratio)
+      const containerAspect = canvas.width / canvas.height;
+
+      let canvasX, canvasY;
+      if (containerAspect > SVG_ASPECT) {
+        // Container wider - SVG fitted to height
+        const scale = canvas.height / SVG_HEIGHT;
+        const offsetX = (canvas.width - SVG_WIDTH * scale) / 2;
+        canvasX = offsetX + svgX * scale;
+        canvasY = svgY * scale;
+      } else {
+        // Container taller - SVG fitted to width
+        const scale = canvas.width / SVG_WIDTH;
+        const offsetY = (canvas.height - SVG_HEIGHT * scale) / 2;
+        canvasX = svgX * scale;
+        canvasY = offsetY + svgY * scale;
+      }
 
       return { x: canvasX, y: canvasY };
     };
@@ -644,25 +626,28 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
       // When all timezones have celebrated, sparkle the entire globe
       if (allCelebrated) {
-        // Only generate sparkles once land mask is ready
-        if (landMask) {
-          // Generate random sparkles across the globe
-          for (let i = 0; i < 3; i++) {
-            if (Math.random() > 0.7) {
-              const sparkLng = Math.random() * 360 - 180;
-              const sparkLat = Math.random() * 130 - 60;
-              const { x, y } = latLngToCanvas(sparkLat, sparkLng);
+        // Generate random sparkles across the globe
+        for (let i = 0; i < 3; i++) {
+          if (Math.random() > 0.7) {
+            const sparkLng = Math.random() * 360 - 180;
+            const sparkLat = Math.random() * 130 - 60;
+            const { x, y } = latLngToCanvas(sparkLat, sparkLng);
+            if (landMask) {
               addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
+            } else {
+              const sparkleColor = getTemperatureColor(sparkLat, sparkLng);
+              particles.push(new Particle(x, y, sparkleColor, false, 0));
             }
           }
+        }
 
-          // Also spawn sparkles at airport locations to ensure small landmasses get coverage
-          const airports = getAirports();
-          if (Math.random() > 0.85) {
-            const airport = airports[Math.floor(Math.random() * airports.length)];
-            const { x, y } = latLngToCanvas(airport.lat, airport.lng);
-            addSparkleOnLand(x, y, airport.lat, airport.lng, false, 0);
-          }
+        // Also spawn sparkles at airport locations to ensure small landmasses get coverage
+        const airports = getAirports();
+        if (Math.random() > 0.85) {
+          const airport = airports[Math.floor(Math.random() * airports.length)];
+          const { x, y } = latLngToCanvas(airport.lat, airport.lng);
+          const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
+          particles.push(new Particle(x, y, sparkleColor, false, 0));
         }
       } else {
         // For each past timezone, generate sparkles in vertical bands on land
@@ -672,9 +657,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         });
 
         // Also spawn sparkles at airports in past timezones (ensures small landmasses get coverage)
-        if (landMask && Math.random() > 0.9) {
-          const airports = getAirports();
-          const pastOffsets = new Set(pastTimezones.map(tz => tz.offset));
+        const airports = getAirports();
+        const pastOffsets = new Set(pastTimezones.map(tz => tz.offset));
+        if (Math.random() > 0.9) {
           // Find airports roughly in past timezone longitudes
           const eligibleAirports = airports.filter(ap => {
             const approxOffset = Math.round(ap.lng / 15);
@@ -683,7 +668,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           if (eligibleAirports.length > 0) {
             const airport = eligibleAirports[Math.floor(Math.random() * eligibleAirports.length)];
             const { x, y } = latLngToCanvas(airport.lat, airport.lng);
-            addSparkleOnLand(x, y, airport.lat, airport.lng, false, 0);
+            const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
+            particles.push(new Particle(x, y, sparkleColor, false, 0));
           }
         }
 
@@ -728,14 +714,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
-      {/* Loading overlay - shown while land mask is generating */}
-      {!landMask && (
-        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm">
-          <Loader2 className="animate-spin text-indigo-500 mb-4" size={48} />
-          <p className="text-white/70 text-sm tracking-wide">Loading map...</p>
-        </div>
-      )}
-
       {/* Hidden canvas for land mask */}
       <canvas ref={maskCanvasRef} className="hidden" />
 
