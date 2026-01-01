@@ -1,6 +1,6 @@
 // Script to fetch live temperatures and update the hardcoded values
-// Run by GitHub Actions every 30 minutes
-// Fetches temps for ~18,780 airports worldwide
+// Run by GitHub Actions every 3 hours
+// Fetches temps for ~500 major international airports
 
 import fs from 'fs';
 import path from 'path';
@@ -118,7 +118,7 @@ async function main() {
   try {
     const temps = await fetchTemperatures();
 
-    if (Object.keys(temps).length < 1000) {
+    if (Object.keys(temps).length < 400) {
       throw new Error('Too few temperatures fetched, something went wrong');
     }
 
