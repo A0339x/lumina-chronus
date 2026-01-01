@@ -436,13 +436,34 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       return landMask.data[idx] > 100;
     };
 
-    // Convert longitude to x position, accounting for date line crossing
-    const lngToX = (lng: number, width: number, tzOffset?: number): number => {
-      let adjustedLng = lng;
-      if (tzOffset !== undefined && tzOffset >= 12 && lng < 0) {
-        adjustedLng = lng + 360;
+    // Convert lat/lng to canvas coordinates matching the map's projection
+    const latLngToCanvas = (lat: number, lng: number): { x: number; y: number } => {
+      // Match the map's d3 geoEquirectangular projection
+      const pixelsPerDegree = MAP_SCALE * (Math.PI / 180);
+
+      // Convert to SVG coordinates (800x600 with center at [0, 20])
+      const svgX = (SVG_WIDTH / 2) + (lng - MAP_CENTER_LNG) * pixelsPerDegree;
+      const svgY = (SVG_HEIGHT / 2) - (lat - MAP_CENTER_LAT) * pixelsPerDegree;
+
+      // Convert SVG coords to canvas coords (accounting for aspect ratio)
+      const containerAspect = canvas.width / canvas.height;
+
+      let canvasX, canvasY;
+      if (containerAspect > SVG_ASPECT) {
+        // Container wider - SVG fitted to height
+        const scale = canvas.height / SVG_HEIGHT;
+        const offsetX = (canvas.width - SVG_WIDTH * scale) / 2;
+        canvasX = offsetX + svgX * scale;
+        canvasY = svgY * scale;
+      } else {
+        // Container taller - SVG fitted to width
+        const scale = canvas.width / SVG_WIDTH;
+        const offsetY = (canvas.height - SVG_HEIGHT * scale) / 2;
+        canvasX = svgX * scale;
+        canvasY = offsetY + svgY * scale;
       }
-      return (adjustedLng + 180) * (width / 360);
+
+      return { x: canvasX, y: canvasY };
     };
 
     class Particle {
@@ -597,8 +618,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             const lngVariation = (Math.random() - 0.5) * 15;
             const sparkLng = centerLng + lngVariation;
             const sparkLat = Math.random() * 130 - 60;
-            const x = lngToX(sparkLng, canvas.width, offset);
-            const y = ((-1 * sparkLat) + 90) * (canvas.height / 180);
+            const { x, y } = latLngToCanvas(sparkLat, sparkLng);
             addSparkleOnLand(x, y, sparkLat, sparkLng, isCelebrating, currentIntensity);
           }
         }
@@ -611,8 +631,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           if (Math.random() > 0.7) {
             const sparkLng = Math.random() * 360 - 180;
             const sparkLat = Math.random() * 130 - 60;
-            const x = (sparkLng + 180) * (canvas.width / 360);
-            const y = ((-1 * sparkLat) + 90) * (canvas.height / 180);
+            const { x, y } = latLngToCanvas(sparkLat, sparkLng);
             if (landMask) {
               addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
             } else {
@@ -626,8 +645,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         const airports = getAirports();
         if (Math.random() > 0.85) {
           const airport = airports[Math.floor(Math.random() * airports.length)];
-          const x = (airport.lng + 180) * (canvas.width / 360);
-          const y = ((-1 * airport.lat) + 90) * (canvas.height / 180);
+          const { x, y } = latLngToCanvas(airport.lat, airport.lng);
           const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
           particles.push(new Particle(x, y, sparkleColor, false, 0));
         }
@@ -649,8 +667,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           });
           if (eligibleAirports.length > 0) {
             const airport = eligibleAirports[Math.floor(Math.random() * eligibleAirports.length)];
-            const x = (airport.lng + 180) * (canvas.width / 360);
-            const y = ((-1 * airport.lat) + 90) * (canvas.height / 180);
+            const { x, y } = latLngToCanvas(airport.lat, airport.lng);
             const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
             particles.push(new Particle(x, y, sparkleColor, false, 0));
           }
@@ -668,8 +685,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       // Active fireworks (current timezone hitting midnight)
       activeFireworks.forEach(fw => {
         if (Math.random() > 0.5) {
-          const x = lngToX(fw.lng, canvas.width);
-          const y = ((-1 * fw.lat) + 90) * (canvas.height / 180);
+          const { x, y } = latLngToCanvas(fw.lat, fw.lng);
           addSparkleOnLand(x, y, fw.lat, fw.lng, true, 1);
         }
       });
