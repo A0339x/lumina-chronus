@@ -563,22 +563,30 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
       update(): boolean {
         this.life++;
-        this.twinklePhase += this.twinkleSpeed;
 
-        // Continuous twinkle between 0.4 and 1.0 (never fully fades out)
-        const twinkle = 0.7 + 0.3 * Math.sin(this.twinklePhase);
+        const lifeRatio = this.life / this.maxLife;
 
-        if (this.isCelebration) {
-          // Celebration particles pulse more dramatically
-          this.pulsePhase += 0.1;
-          const pulse = 0.85 + 0.15 * Math.sin(this.pulsePhase * 3);
-          this.alpha = this.maxAlpha * twinkle * pulse;
+        if (lifeRatio < 0.15) {
+          // Fade in
+          this.alpha = (lifeRatio / 0.15) * this.maxAlpha;
+        } else if (lifeRatio > 0.7) {
+          // Fade out
+          this.alpha = ((1 - lifeRatio) / 0.3) * this.maxAlpha;
         } else {
-          this.alpha = this.maxAlpha * twinkle;
+          // Twinkle
+          this.twinklePhase += this.twinkleSpeed;
+          const twinkle = 0.7 + 0.3 * Math.sin(this.twinklePhase);
+
+          if (this.isCelebration) {
+            this.pulsePhase += 0.1;
+            const pulse = 0.85 + 0.15 * Math.sin(this.pulsePhase * 3);
+            this.alpha = this.maxAlpha * twinkle * pulse;
+          } else {
+            this.alpha = this.maxAlpha * twinkle;
+          }
         }
 
-        // Never die - always return true
-        return true;
+        return this.life < this.maxLife;
       }
     }
 
@@ -604,24 +612,14 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       const airports = getAirports();
 
       if (allCelebratedRef.current) {
-        // After all celebrated: ensure every airport has a sparkle
-        // Check which airports need a new sparkle (track by index)
-        const airportHasSparkle = new Set(
-          particles
-            .filter(p => (p as any).airportIndex !== undefined)
-            .map(p => (p as any).airportIndex)
-        );
-
-        // Spawn sparkles for airports that don't have one
-        airports.forEach((airport, index) => {
-          if (!airportHasSparkle.has(index)) {
-            const { x, y } = latLngToCanvas(airport.lat, airport.lng);
-            const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
-            const particle = new Particle(x, y, sparkleColor, false, 0);
-            (particle as any).airportIndex = index; // Track which airport this belongs to
-            particles.push(particle);
-          }
-        });
+        // After all celebrated: randomly spawn sparkles at airports
+        // With 18,780 airports, spawn a few per frame to keep ~100-200 visible
+        if (Math.random() > 0.85) { // ~15% chance per frame
+          const airport = airports[Math.floor(Math.random() * airports.length)];
+          const { x, y } = latLngToCanvas(airport.lat, airport.lng);
+          const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
+          particles.push(new Particle(x, y, sparkleColor, false, 0));
+        }
       } else {
         // During countdown: only spawn at airports in past timezones
         const pastOffsets = new Set(pastTimezonesRef.current.map(tz => tz.offset));
