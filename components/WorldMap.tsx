@@ -1362,10 +1362,24 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           isFlightTooltipVisible ? 'opacity-100' : 'opacity-0'
         }`}
         style={{
-          left: Math.min((flightHoverInfo?.x ?? 0) + 20, window.innerWidth - 320),
-          top: (flightHoverInfo?.y ?? 0) > window.innerHeight - 500
-            ? (flightHoverInfo?.y ?? 0) - 480
-            : (flightHoverInfo?.y ?? 0) + 20,
+          left: Math.min(Math.max(10, (flightHoverInfo?.x ?? 0) + 25), window.innerWidth - 320),
+          top: (() => {
+            const cursorY = flightHoverInfo?.y ?? 0;
+            const tooltipHeight = 480;
+            const margin = 30;
+            const spaceBelow = window.innerHeight - cursorY - margin;
+            const spaceAbove = cursorY - margin;
+
+            // Prefer below cursor, but use above if not enough space
+            if (spaceBelow >= tooltipHeight) {
+              return cursorY + margin;
+            } else if (spaceAbove >= tooltipHeight) {
+              return cursorY - tooltipHeight - margin;
+            } else {
+              // Not enough space either way - clamp to screen
+              return Math.max(10, Math.min(cursorY - tooltipHeight / 2, window.innerHeight - tooltipHeight - 10));
+            }
+          })(),
         }}
       >
         {flightHoverInfo && (
