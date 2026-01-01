@@ -97,35 +97,18 @@ const MAP_CENTER_LAT = 20;
 // react-simple-maps default SVG dimensions
 const SVG_WIDTH = 800;
 const SVG_HEIGHT = 600;
-const SVG_ASPECT = SVG_WIDTH / SVG_HEIGHT;
 
 // Convert screen coordinates to lat/lng based on equirectangular projection
+// Note: Map stretches to fill container (width/height 100%), so we use simple stretching
 const screenToLatLng = (
   screenX: number,
   screenY: number,
   containerWidth: number,
   containerHeight: number
 ): { lat: number; lng: number } => {
-  // SVG preserves aspect ratio (xMidYMid meet) - calculate actual rendered size
-  const containerAspect = containerWidth / containerHeight;
-
-  let svgX, svgY;
-
-  if (containerAspect > SVG_ASPECT) {
-    // Container is wider than SVG - SVG fitted to height, centered horizontally
-    const scale = containerHeight / SVG_HEIGHT;
-    const renderedWidth = SVG_WIDTH * scale;
-    const offsetX = (containerWidth - renderedWidth) / 2;
-    svgX = ((screenX - offsetX) / renderedWidth) * SVG_WIDTH;
-    svgY = (screenY / containerHeight) * SVG_HEIGHT;
-  } else {
-    // Container is taller than SVG - SVG fitted to width, centered vertically
-    const scale = containerWidth / SVG_WIDTH;
-    const renderedHeight = SVG_HEIGHT * scale;
-    const offsetY = (containerHeight - renderedHeight) / 2;
-    svgX = (screenX / containerWidth) * SVG_WIDTH;
-    svgY = ((screenY - offsetY) / renderedHeight) * SVG_HEIGHT;
-  }
+  // Convert screen coords to SVG coords (simple stretch - no aspect ratio preservation)
+  const svgX = (screenX / containerWidth) * SVG_WIDTH;
+  const svgY = (screenY / containerHeight) * SVG_HEIGHT;
 
   // For d3 geoEquirectangular projection:
   // scale = pixels per radian, so pixels per degree = scale * (π/180)
@@ -350,20 +333,54 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
   // Create land mask from the hidden mask map
   useEffect(() => {
+    let retryCount = 0;
+    const maxRetries = 20; // Allow up to 10 seconds for large maps to load
+
     const createLandMask = () => {
       const maskMap = document.getElementById('land-mask-map');
       const maskCanvas = maskCanvasRef.current;
-      if (!maskMap || !maskCanvas || !containerRef.current) return;
+      if (!maskMap || !maskCanvas || !containerRef.current) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(createLandMask, 500);
+        }
+        return;
+      }
 
       const width = containerRef.current.offsetWidth;
       const height = containerRef.current.offsetHeight;
 
       // Skip if container has no dimensions yet
       if (width === 0 || height === 0) {
-        // Retry after a short delay
-        setTimeout(createLandMask, 100);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(createLandMask, 500);
+        }
         return;
       }
+
+      // Find the SVG inside the mask map
+      const svg = maskMap.querySelector('svg');
+      if (!svg) {
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(createLandMask, 500);
+        }
+        return;
+      }
+
+      // Check if geography paths have loaded (important for large 10m files)
+      const paths = svg.querySelectorAll('path');
+      if (paths.length === 0) {
+        console.log('[LandMask] Waiting for geography to load... attempt', retryCount + 1);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(createLandMask, 500);
+        }
+        return;
+      }
+
+      console.log('[LandMask] Found', paths.length, 'paths, creating mask...');
 
       maskCanvas.width = width;
       maskCanvas.height = height;
@@ -371,20 +388,28 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       const ctx = maskCanvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
 
-      // Find the SVG inside the mask map
-      const svg = maskMap.querySelector('svg');
-      if (!svg) return;
-
       // Clone and modify SVG for mask
       const svgClone = svg.cloneNode(true) as SVGSVGElement;
+
+      // Set viewBox to match react-simple-maps default coordinate system
+      svgClone.setAttribute('viewBox', '0 0 800 600');
       svgClone.setAttribute('width', String(width));
       svgClone.setAttribute('height', String(height));
+      // Stretch to fill container (must match how sparkles are positioned)
+      svgClone.setAttribute('preserveAspectRatio', 'none');
+      // Remove any inline styles that might interfere
+      svgClone.removeAttribute('style');
 
       // Make all paths white on black for clear land detection
-      const paths = svgClone.querySelectorAll('path');
-      paths.forEach(path => {
+      const clonedPaths = svgClone.querySelectorAll('path');
+      clonedPaths.forEach(path => {
+        // Set both attributes and inline styles to ensure white fill
         path.setAttribute('fill', '#FFFFFF');
         path.setAttribute('stroke', '#FFFFFF');
+        path.setAttribute('stroke-width', '0.5');
+        // Override any CSS styles
+        (path as HTMLElement).style.fill = '#FFFFFF';
+        (path as HTMLElement).style.stroke = '#FFFFFF';
       });
 
       const svgData = new XMLSerializer().serializeToString(svgClone);
@@ -399,10 +424,15 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         const imageData = ctx.getImageData(0, 0, width, height);
         setLandMask(imageData);
         URL.revokeObjectURL(url);
+        console.log('[LandMask] Created successfully:', width, 'x', height);
       };
       img.onerror = () => {
-        console.error('Failed to load land mask image');
+        console.error('[LandMask] Failed to load image, retrying...');
         URL.revokeObjectURL(url);
+        if (retryCount < maxRetries) {
+          retryCount++;
+          setTimeout(createLandMask, 500);
+        }
       };
       img.src = url;
     };
