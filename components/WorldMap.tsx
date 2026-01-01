@@ -4,7 +4,7 @@ import { FireworkEvent, TimezoneData } from '../types';
 import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportConditions, WeatherCondition, WeatherIntensity } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
-import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, TRACKED_FLIGHTS, formatSquawkStatus } from '../services/flightService';
+import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, formatSquawkStatus } from '../services/flightService';
 import { LightningStrike, subscribeLightning, connectLightning, disconnectLightning } from '../services/lightningService';
 import { ISSPosition, fetchISSPosition, getInterpolatedISSPosition, formatVelocity, formatAltitude } from '../services/issService';
 
@@ -125,25 +125,6 @@ const getWeatherConditionLabel = (condition: WeatherCondition, intensity: Weathe
   }
 };
 
-// Fallback flight data when AC999 is not in the air
-const FALLBACK_FLIGHT: FlightInfo = {
-  flightNumber: 'AC999',
-  callsign: 'ACA999',
-  airline: 'Air Canada',
-  aircraft: 'Boeing 737 MAX 8',
-  origin: { icao: 'CYUL', name: 'Montreal-Trudeau', lat: 45.47, lng: -73.74 },
-  destination: { icao: 'MMPR', name: 'Puerto Vallarta', lat: 20.68, lng: -105.25 },
-  departureTime: '09:00',
-  arrivalTime: '13:15',
-  duration: '5h 15m',
-  distance: '3,650 km',
-  flightAttendant: 'The Best Flight Attendant',
-  status: 'Scheduled' as const,
-  position: null,
-  alerts: [],
-  alertSeverity: 'normal',
-};
-
 // Calculate heading/bearing between two points
 const calculateBearing = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
   const dLng = (lng2 - lng1) * Math.PI / 180;
@@ -163,6 +144,7 @@ interface WorldMapProps {
   devCelebrationOffset?: number | null; // For testing: trigger celebration on this offset
   devTrigger?: number; // Increment to re-trigger celebration
   allCelebrated?: boolean; // When true, sparkle the entire globe
+  trackedFlights?: string[]; // List of callsigns to track
 }
 
 interface HoverInfo {
@@ -246,7 +228,7 @@ const getTempDescription = (tempC: number, unit: 'C' | 'F', formatTemp: (c: numb
   return `Very hot ${formatted}`;
 };
 
-const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, devCelebrationOffset, devTrigger, allCelebrated }) => {
+const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, devCelebrationOffset, devTrigger, allCelebrated, trackedFlights = [] }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -266,7 +248,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const issPositionRef = useRef<ISSPosition | null>(null);
   const issCanvasPosRef = useRef<{ x: number; y: number } | null>(null);
   const flightProgressRef = useRef(0);
-  const planePositionRef = useRef<{ x: number; y: number; bearing: number } | null>(null);
+  const planePositionsRef = useRef<Map<string, { x: number; y: number; bearing: number }>>(new Map());
+  const hoveredFlightRef = useRef<string | null>(null);
   const liveFlightsRef = useRef<Map<string, FlightInfo>>(new Map());
   const lightningStrikesRef = useRef<LightningStrike[]>([]);
   const fadeTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -371,33 +354,39 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       }
     }
 
-    // Check if hovering over the plane
-    if (planePositionRef.current) {
-      const planePos = planePositionRef.current;
+    // Check if hovering over any plane
+    let foundPlane = false;
+    for (const [callsign, planePos] of planePositionsRef.current) {
       const dx = localX - planePos.x;
       const dy = localY - planePos.y;
       const distToPlane = Math.sqrt(dx * dx + dy * dy);
 
       if (distToPlane < 25) {
-        // Hovering over plane - show flight info (use live data or fallback)
-        const liveAC999 = liveFlightsRef.current.get('ACA999');
-        const flight = liveAC999 || FALLBACK_FLIGHT;
-        setIsFlightTooltipVisible(true);
-        setFlightHoverInfo({
-          flight: flight as FlightInfo,
-          progress: flightProgressRef.current,
-          x: event.clientX,
-          y: event.clientY
-        });
-        // Hide country tooltip
-        setIsTooltipVisible(false);
-        setIsIssTooltipVisible(false);
-        return;
-      } else {
-        // Not hovering over plane
-        setIsFlightTooltipVisible(false);
-        setFlightHoverInfo(null);
+        // Hovering over plane - show flight info
+        const flight = liveFlightsRef.current.get(callsign);
+        if (flight) {
+          hoveredFlightRef.current = callsign;
+          setIsFlightTooltipVisible(true);
+          setFlightHoverInfo({
+            flight,
+            progress: calculateFlightProgress(flight),
+            x: event.clientX,
+            y: event.clientY
+          });
+          // Hide country tooltip
+          setIsTooltipVisible(false);
+          setIsIssTooltipVisible(false);
+          foundPlane = true;
+          break;
+        }
       }
+    }
+
+    if (!foundPlane) {
+      // Not hovering over any plane
+      hoveredFlightRef.current = null;
+      setIsFlightTooltipVisible(false);
+      setFlightHoverInfo(null);
     }
 
     const { lat, lng } = screenToLatLng(localX, localY, rect.width, rect.height);
@@ -450,17 +439,23 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
   // Fetch live flight data
   useEffect(() => {
+    if (trackedFlights.length === 0) {
+      setLiveFlights(new Map());
+      liveFlightsRef.current = new Map();
+      return;
+    }
+
     const loadFlights = async () => {
-      const flights = await fetchFlightData(TRACKED_FLIGHTS);
+      const flights = await fetchFlightData(trackedFlights);
       setLiveFlights(flights);
       liveFlightsRef.current = flights;
     };
     loadFlights();
 
-    // Refresh flight data every 10 seconds (OpenSky rate limit)
+    // Refresh flight data every 10 seconds
     const interval = setInterval(loadFlights, 10 * 1000);
     return () => clearInterval(interval);
-  }, []);
+  }, [trackedFlights]);
 
   // Connect to lightning WebSocket
   useEffect(() => {
@@ -491,14 +486,15 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
   // Update flight tooltip when live data changes (so numbers update while hovering)
   useEffect(() => {
-    if (isFlightTooltipVisible && flightHoverInfo) {
-      const liveAC999 = liveFlights.get('ACA999');
-      const flight = liveAC999 || FALLBACK_FLIGHT;
-      setFlightHoverInfo(prev => prev ? {
-        ...prev,
-        flight: flight as FlightInfo,
-        progress: calculateFlightProgress(flight as FlightInfo),
-      } : null);
+    if (isFlightTooltipVisible && flightHoverInfo && hoveredFlightRef.current) {
+      const flight = liveFlights.get(hoveredFlightRef.current);
+      if (flight) {
+        setFlightHoverInfo(prev => prev ? {
+          ...prev,
+          flight,
+          progress: calculateFlightProgress(flight),
+        } : null);
+      }
     }
   }, [liveFlights, isFlightTooltipVisible]);
 
@@ -1050,117 +1046,118 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         ctx.restore();
       }
 
-      // Draw flight path AC999: Montreal to Puerto Vallarta (LIVE DATA)
-      const liveAC999 = liveFlightsRef.current.get('ACA999');
-      const flight = liveAC999 || FALLBACK_FLIGHT;
-      const isLive = flight.status === 'In Flight' && flight.position !== null;
+      // Clear plane positions for this frame
+      planePositionsRef.current.clear();
 
-      const originPos = latLngToCanvas(flight.origin.lat, flight.origin.lng);
-      const destPos = latLngToCanvas(flight.destination.lat, flight.destination.lng);
+      // Draw all tracked flights
+      for (const [callsign, flight] of liveFlightsRef.current) {
+        if (!flight.position) continue; // Skip flights without position data
 
-      let planeCanvasPos: { x: number; y: number };
-      let bearing: number;
-      let progress: number;
+        const isLive = flight.status === 'In Flight' && flight.position !== null;
+        const hasKnownRoute = flight.origin.lat !== 0 && flight.destination.lat !== 0;
 
-      if (isLive && flight.position) {
-        // Use real-time position from OpenSky
-        planeCanvasPos = latLngToCanvas(flight.position.latitude, flight.position.longitude);
-        bearing = flight.position.heading; // Real heading from transponder
-        progress = calculateFlightProgress(flight);
-      } else {
-        // Flight not in air - show at origin with 0 progress
-        planeCanvasPos = originPos;
-        bearing = calculateBearing(
-          flight.origin.lat, flight.origin.lng,
-          flight.destination.lat, flight.destination.lng
-        );
-        progress = 0;
-      }
+        // Get plane position
+        const planeCanvasPos = latLngToCanvas(flight.position.latitude, flight.position.longitude);
+        const bearing = flight.position.heading || 0;
 
-      flightProgressRef.current = progress;
+        // Store plane position for hover detection
+        planePositionsRef.current.set(callsign, { x: planeCanvasPos.x, y: planeCanvasPos.y, bearing });
 
-      // Store plane position for hover detection
-      planePositionRef.current = { x: planeCanvasPos.x, y: planeCanvasPos.y, bearing };
+        // Draw route line if we have origin/destination
+        if (hasKnownRoute) {
+          const originPos = latLngToCanvas(flight.origin.lat, flight.origin.lng);
+          const destPos = latLngToCanvas(flight.destination.lat, flight.destination.lng);
 
-      // Draw the full route as a subtle dashed line
-      ctx.save();
-      ctx.setLineDash([3, 6]);
-      ctx.strokeStyle = isLive ? 'rgba(165, 180, 252, 0.25)' : 'rgba(165, 180, 252, 0.12)';
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(originPos.x, originPos.y);
-      ctx.lineTo(destPos.x, destPos.y);
-      ctx.stroke();
-      ctx.setLineDash([]);
+          // Draw the full route as a subtle dashed line
+          ctx.save();
+          ctx.setLineDash([3, 6]);
+          ctx.strokeStyle = isLive ? 'rgba(165, 180, 252, 0.25)' : 'rgba(165, 180, 252, 0.12)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(originPos.x, originPos.y);
+          ctx.lineTo(destPos.x, destPos.y);
+          ctx.stroke();
+          ctx.setLineDash([]);
 
-      // Draw the traveled path as subtle gradient line (only if in flight)
-      if (isLive) {
-        ctx.strokeStyle = 'rgba(199, 210, 254, 0.5)';
-        ctx.lineWidth = 1.5;
-        ctx.shadowBlur = 4;
-        ctx.shadowColor = 'rgba(165, 180, 252, 0.5)';
+          // Draw the traveled path as subtle gradient line (only if in flight)
+          if (isLive) {
+            ctx.strokeStyle = 'rgba(199, 210, 254, 0.5)';
+            ctx.lineWidth = 1.5;
+            ctx.shadowBlur = 4;
+            ctx.shadowColor = 'rgba(165, 180, 252, 0.5)';
+            ctx.beginPath();
+            ctx.moveTo(originPos.x, originPos.y);
+            ctx.lineTo(planeCanvasPos.x, planeCanvasPos.y);
+            ctx.stroke();
+            ctx.shadowBlur = 0;
+          }
+
+          // Draw origin marker
+          ctx.fillStyle = 'rgba(199, 210, 254, 0.6)';
+          ctx.beginPath();
+          ctx.arc(originPos.x, originPos.y, 2.5, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Draw destination marker
+          ctx.strokeStyle = 'rgba(199, 210, 254, 0.6)';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.arc(destPos.x, destPos.y, 3.5, 0, Math.PI * 2);
+          ctx.stroke();
+
+          ctx.restore();
+        }
+
+        // Draw the plane icon
+        ctx.save();
+        ctx.translate(planeCanvasPos.x, planeCanvasPos.y);
+        ctx.rotate((bearing - 90) * Math.PI / 180);
+
+        const planeSize = 7;
+
+        // Color based on alert status
+        const hasAlert = flight.alertSeverity === 'critical' || flight.alertSeverity === 'warning';
+        if (flight.alertSeverity === 'critical') {
+          ctx.fillStyle = 'rgba(248, 113, 113, 0.9)'; // Red for critical
+          ctx.shadowColor = '#ef4444';
+        } else if (flight.alertSeverity === 'warning') {
+          ctx.fillStyle = 'rgba(251, 191, 36, 0.9)'; // Amber for warning
+          ctx.shadowColor = '#f59e0b';
+        } else {
+          ctx.fillStyle = isLive ? 'rgba(224, 231, 255, 0.9)' : 'rgba(165, 180, 252, 0.4)';
+          ctx.shadowColor = '#ffc832';
+        }
+        ctx.shadowBlur = isLive ? 6 : 3;
+
+        // Plane body
         ctx.beginPath();
-        ctx.moveTo(originPos.x, originPos.y);
-        ctx.lineTo(planeCanvasPos.x, planeCanvasPos.y);
-        ctx.stroke();
-        ctx.shadowBlur = 0;
+        ctx.moveTo(planeSize * 1.5, 0);
+        ctx.lineTo(-planeSize, -planeSize * 0.4);
+        ctx.lineTo(-planeSize * 0.5, 0);
+        ctx.lineTo(-planeSize, planeSize * 0.4);
+        ctx.closePath();
+        ctx.fill();
+
+        // Wings
+        ctx.beginPath();
+        ctx.moveTo(0, 0);
+        ctx.lineTo(-planeSize * 0.3, -planeSize * 1.2);
+        ctx.lineTo(-planeSize * 0.6, 0);
+        ctx.lineTo(-planeSize * 0.3, planeSize * 1.2);
+        ctx.closePath();
+        ctx.fill();
+
+        // Tail
+        ctx.beginPath();
+        ctx.moveTo(-planeSize * 0.8, 0);
+        ctx.lineTo(-planeSize * 1.1, -planeSize * 0.6);
+        ctx.lineTo(-planeSize, 0);
+        ctx.lineTo(-planeSize * 1.1, planeSize * 0.6);
+        ctx.closePath();
+        ctx.fill();
+
+        ctx.restore();
       }
-
-      // Draw origin and destination markers (subtle)
-      // Origin (Montreal)
-      ctx.fillStyle = 'rgba(199, 210, 254, 0.6)';
-      ctx.beginPath();
-      ctx.arc(originPos.x, originPos.y, 2.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      // Destination (Puerto Vallarta) - subtle ring to complement origin dot
-      ctx.strokeStyle = 'rgba(199, 210, 254, 0.6)';
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.arc(destPos.x, destPos.y, 3.5, 0, Math.PI * 2);
-      ctx.stroke();
-
-      // Draw the plane icon (subtle, fits with design)
-      ctx.save();
-      ctx.translate(planeCanvasPos.x, planeCanvasPos.y);
-      // Rotate to face direction of travel (bearing is from north, canvas rotation is from east)
-      ctx.rotate((bearing - 90) * Math.PI / 180);
-
-      // Draw plane shape (pointing right when rotation is 0)
-      const planeSize = 7;
-      ctx.fillStyle = isLive ? 'rgba(224, 231, 255, 0.9)' : 'rgba(165, 180, 252, 0.4)';
-      ctx.shadowBlur = isLive ? 6 : 3;
-      ctx.shadowColor = '#ffc832';
-
-      // Plane body
-      ctx.beginPath();
-      ctx.moveTo(planeSize * 1.5, 0); // Nose
-      ctx.lineTo(-planeSize, -planeSize * 0.4); // Top back
-      ctx.lineTo(-planeSize * 0.5, 0); // Back indent
-      ctx.lineTo(-planeSize, planeSize * 0.4); // Bottom back
-      ctx.closePath();
-      ctx.fill();
-
-      // Wings
-      ctx.beginPath();
-      ctx.moveTo(0, 0);
-      ctx.lineTo(-planeSize * 0.3, -planeSize * 1.2); // Left wing tip
-      ctx.lineTo(-planeSize * 0.6, 0);
-      ctx.lineTo(-planeSize * 0.3, planeSize * 1.2); // Right wing tip
-      ctx.closePath();
-      ctx.fill();
-
-      // Tail
-      ctx.beginPath();
-      ctx.moveTo(-planeSize * 0.8, 0);
-      ctx.lineTo(-planeSize * 1.1, -planeSize * 0.6);
-      ctx.lineTo(-planeSize, 0);
-      ctx.lineTo(-planeSize * 1.1, planeSize * 0.6);
-      ctx.closePath();
-      ctx.fill();
-
-      ctx.restore();
-      ctx.restore();
 
       animationFrameId = requestAnimationFrame(render);
     };

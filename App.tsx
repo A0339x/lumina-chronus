@@ -14,8 +14,31 @@ import MobileLegend from './components/MobileLegend';
 import UnityMessage from './components/UnityMessage';
 import Onboarding from './components/Onboarding';
 import RotatePrompt from './components/RotatePrompt';
+import FlightTracker, { TrackedFlight } from './components/FlightTracker';
 import { TemperatureProvider } from './contexts/TemperatureContext';
 import { Loader2, Heart, Info } from 'lucide-react';
+
+// Load tracked flights from localStorage
+const loadTrackedFlights = (): TrackedFlight[] => {
+  try {
+    const stored = localStorage.getItem('lumina-tracked-flights');
+    if (stored) {
+      return JSON.parse(stored);
+    }
+  } catch (e) {
+    console.error('Failed to load tracked flights:', e);
+  }
+  return [];
+};
+
+// Save tracked flights to localStorage
+const saveTrackedFlights = (flights: TrackedFlight[]) => {
+  try {
+    localStorage.setItem('lumina-tracked-flights', JSON.stringify(flights));
+  } catch (e) {
+    console.error('Failed to save tracked flights:', e);
+  }
+};
 
 const App: React.FC = () => {
   const [state, setState] = useState<CountdownState | null>(null);
@@ -23,6 +46,20 @@ const App: React.FC = () => {
   const [isInitializing, setIsInitializing] = useState(true);
   const [mapFireworks, setMapFireworks] = useState<FireworkEvent[]>([]);
   const [pastTimezones, setPastTimezones] = useState<TimezoneData[]>([]);
+
+  // Flight tracking
+  const [trackedFlights, setTrackedFlights] = useState<TrackedFlight[]>(loadTrackedFlights);
+
+  // Save tracked flights when they change
+  const handleFlightsChange = useCallback((flights: TrackedFlight[]) => {
+    setTrackedFlights(flights);
+    saveTrackedFlights(flights);
+  }, []);
+
+  // Get visible flight callsigns for WorldMap
+  const visibleFlightCallsigns = trackedFlights
+    .filter(f => f.visible)
+    .map(f => f.callsign);
 
   // Dev mode for testing celebrations
   const [devCelebrationOffset, setDevCelebrationOffset] = useState<number | null>(null);
@@ -235,6 +272,15 @@ const App: React.FC = () => {
               devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
               devTrigger={devCelebrationKey}
               allCelebrated={allCelebrated}
+              trackedFlights={visibleFlightCallsigns}
+            />
+          </div>
+
+          {/* Flight Tracker - Top Right */}
+          <div className="absolute top-4 right-4 z-20">
+            <FlightTracker
+              flights={trackedFlights}
+              onFlightsChange={handleFlightsChange}
             />
           </div>
 
@@ -285,7 +331,7 @@ const App: React.FC = () => {
           </section>
 
           {/* Middle Section: World Map - MAIN FOCUS */}
-          <section className="w-full flex-1 flex flex-col items-center justify-center min-h-0 py-1">
+          <section className="w-full flex-1 flex flex-col items-center justify-center min-h-0 py-1 relative">
               <div className="w-full h-full max-w-7xl flex items-center justify-center">
                   <div className="w-full h-full max-h-[60vh] aspect-[2.5/1]">
                       <WorldMap
@@ -294,8 +340,16 @@ const App: React.FC = () => {
                         devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
                         devTrigger={devCelebrationKey}
                         allCelebrated={allCelebrated}
+                        trackedFlights={visibleFlightCallsigns}
                       />
                   </div>
+              </div>
+              {/* Flight Tracker - Top Right of map area */}
+              <div className="absolute top-2 right-4 z-20">
+                <FlightTracker
+                  flights={trackedFlights}
+                  onFlightsChange={handleFlightsChange}
+                />
               </div>
           </section>
 
