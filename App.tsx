@@ -27,7 +27,11 @@ const App: React.FC = () => {
   const [devCelebrationKey, setDevCelebrationKey] = useState(0); // Increment to re-trigger same offset
 
   // Track if all timezones have celebrated - check immediately on load
-  const [allCelebrated, setAllCelebrated] = useState(() => haveAllTimezonesCelebrated());
+  const [allCelebrated, setAllCelebrated] = useState(() => {
+    const result = haveAllTimezonesCelebrated();
+    console.log('[Lumina] All celebrated:', result, 'UTC:', new Date().toISOString());
+    return result;
+  });
   const [showUnityMessage, setShowUnityMessage] = useState(() => haveAllTimezonesCelebrated()); // Show unity when all celebrated
 
   // Onboarding state - now on-demand instead of automatic
