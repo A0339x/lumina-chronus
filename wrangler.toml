@@ -7,7 +7,7 @@ compatibility_date = "2024-01-01"
 # Then add the binding here with your namespace ID
 [[kv_namespaces]]
 binding = "WEATHER_CACHE"
-id = "YOUR_KV_NAMESPACE_ID"  # Replace with actual ID from dashboard
+id = "3b9ed3817b6a4c2f8a61b271cb42cec6"
 
 # Secrets (set via dashboard or wrangler CLI):
 # - OPENSKY_USERNAME
