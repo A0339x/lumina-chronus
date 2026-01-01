@@ -90,7 +90,9 @@ interface HoverInfo {
 }
 
 // Map projection constants (must match ComposableMap settings)
-const MAP_CENTER_LAT = 20; // Center latitude from projectionConfig
+const MAP_SCALE = 220;
+const MAP_CENTER_LNG = 0;
+const MAP_CENTER_LAT = 20;
 
 // Convert screen coordinates to lat/lng based on equirectangular projection
 const screenToLatLng = (
@@ -99,21 +101,22 @@ const screenToLatLng = (
   containerWidth: number,
   containerHeight: number
 ): { lat: number; lng: number } => {
-  // For equirectangular projection filling the container:
-  // X maps linearly from -180 to +180 longitude
-  // Y maps linearly from +90 to -90 latitude (inverted), offset by center
+  // For d3 geoEquirectangular projection:
+  // scale = pixels per radian at equator
+  // So pixels per degree = scale * (π/180)
+  const pixelsPerDegree = MAP_SCALE * (Math.PI / 180);
 
-  // Normalize to 0-1 range
-  const normalizedX = screenX / containerWidth;
-  const normalizedY = screenY / containerHeight;
+  // Center of container in pixels
+  const centerX = containerWidth / 2;
+  const centerY = containerHeight / 2;
 
-  // Longitude: left edge = -180, right edge = +180
-  const lng = normalizedX * 360 - 180;
+  // Offset from center in pixels
+  const offsetX = screenX - centerX;
+  const offsetY = screenY - centerY;
 
-  // Latitude: top = high lat, bottom = low lat
-  // With center at 20, the map is shifted so lat 20 is at vertical center
-  // Top of map shows ~110°, bottom shows ~-70° (but clamped to real values)
-  const lat = (0.5 - normalizedY) * 180 + MAP_CENTER_LAT;
+  // Convert to degrees from map center
+  const lng = MAP_CENTER_LNG + (offsetX / pixelsPerDegree);
+  const lat = MAP_CENTER_LAT - (offsetY / pixelsPerDegree); // Y inverted
 
   return { lat, lng };
 };

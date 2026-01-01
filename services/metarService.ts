@@ -193,6 +193,10 @@ const AIRPORTS: Airport[] = [
 
   // UTC-4 - Atlantic Canada, Caribbean
   { icao: "CYHZ", lat: 44.88, lng: -63.51, name: "Halifax" },
+  { icao: "CYQM", lat: 46.11, lng: -64.68, name: "Moncton" },
+  { icao: "CYFC", lat: 45.87, lng: -66.53, name: "Fredericton" },
+  { icao: "CYYG", lat: 46.29, lng: -63.12, name: "Charlottetown" },
+  { icao: "CYQX", lat: 48.94, lng: -54.57, name: "Gander" },
   { icao: "TJSJ", lat: 18.44, lng: -66.00, name: "San Juan" },
   { icao: "MDSD", lat: 18.43, lng: -69.67, name: "Santo Domingo" },
   { icao: "SVMI", lat: 10.60, lng: -66.99, name: "Caracas" },
@@ -213,6 +217,10 @@ const AIRPORTS: Airport[] = [
   { icao: "CYYZ", lat: 43.68, lng: -79.63, name: "Toronto" },
   { icao: "CYUL", lat: 45.47, lng: -73.74, name: "Montreal" },
   { icao: "CYOW", lat: 45.32, lng: -75.67, name: "Ottawa" },
+  { icao: "CYQB", lat: 46.79, lng: -71.39, name: "Quebec City" },
+  { icao: "CYQT", lat: 48.37, lng: -89.32, name: "Thunder Bay" },
+  { icao: "CYHM", lat: 43.17, lng: -79.93, name: "Hamilton" },
+  { icao: "CYFB", lat: 63.76, lng: -68.56, name: "Iqaluit" },
   { icao: "SKBO", lat: 4.70, lng: -74.15, name: "Bogotá" },
   { icao: "SPJC", lat: -12.02, lng: -77.11, name: "Lima" },
   { icao: "SEQM", lat: -0.13, lng: -78.36, name: "Quito" },
@@ -228,6 +236,8 @@ const AIRPORTS: Airport[] = [
   { icao: "KSTL", lat: 38.75, lng: -90.37, name: "St. Louis" },
   { icao: "KMSY", lat: 29.99, lng: -90.26, name: "New Orleans" },
   { icao: "CYWG", lat: 49.91, lng: -97.24, name: "Winnipeg" },
+  { icao: "CYQR", lat: 50.43, lng: -104.67, name: "Regina" },
+  { icao: "CYXE", lat: 52.17, lng: -106.70, name: "Saskatoon" },
   { icao: "MMMX", lat: 19.44, lng: -99.07, name: "Mexico City" },
   { icao: "MMUN", lat: 21.04, lng: -86.87, name: "Cancún" },
   { icao: "MGGT", lat: 14.58, lng: -90.53, name: "Guatemala City" },
@@ -245,6 +255,8 @@ const AIRPORTS: Airport[] = [
   { icao: "KBOI", lat: 43.57, lng: -116.22, name: "Boise" },
   { icao: "CYYC", lat: 51.11, lng: -114.02, name: "Calgary" },
   { icao: "CYEG", lat: 53.31, lng: -113.58, name: "Edmonton" },
+  { icao: "CYZF", lat: 62.46, lng: -114.44, name: "Yellowknife" },
+  { icao: "CYXY", lat: 60.71, lng: -135.07, name: "Whitehorse" },
   { icao: "MMCU", lat: 28.70, lng: -105.96, name: "Chihuahua" },
   { icao: "MMHO", lat: 29.10, lng: -111.05, name: "Hermosillo" },
 
@@ -256,6 +268,8 @@ const AIRPORTS: Airport[] = [
   { icao: "KLAS", lat: 36.08, lng: -115.15, name: "Las Vegas" },
   { icao: "KPDX", lat: 45.59, lng: -122.60, name: "Portland" },
   { icao: "CYVR", lat: 49.19, lng: -123.18, name: "Vancouver" },
+  { icao: "CYYJ", lat: 48.65, lng: -123.43, name: "Victoria" },
+  { icao: "CYLW", lat: 49.96, lng: -119.38, name: "Kelowna" },
   { icao: "MMTJ", lat: 32.54, lng: -116.97, name: "Tijuana" },
 
   // UTC-9 - Alaska
@@ -342,19 +356,27 @@ const HARDCODED_TEMPS: Record<string, number> = {
   "CYYT": 1,
 
   // UTC-4 - Atlantic Canada, Caribbean
-  "CYHZ": -3, "TJSJ": 19, "MDSD": 24, "SVMI": 28, "SBBV": 25,
+  "CYHZ": -3, "CYQM": -3, "CYFC": -5, "CYYG": -3, "CYQX": -2,
+  "TJSJ": 19, "MDSD": 24, "SVMI": 28, "SBBV": 25,
 
   // UTC-5 - Eastern US/Canada, Colombia, Peru
-  "KJFK": 1, "KLGA": 0, "KEWR": 0, "KORD": -11, "KATL": 2, "KMIA": 7, "KBOS": -2, "KDCA": 1, "KIAD": 2, "KPHL": 1, "KDTW": -12, "CYYZ": -18, "CYUL": -11, "CYOW": -16, "SKBO": 9, "SPJC": 18, "SEQM": 9, "MUHA": 16, "MKJP": 22, "MPTO": 26,
+  "KJFK": 1, "KLGA": 0, "KEWR": 0, "KORD": -11, "KATL": 2, "KMIA": 7,
+  "KBOS": -2, "KDCA": 1, "KIAD": 2, "KPHL": 1, "KDTW": -12, "CYYZ": -18,
+  "CYUL": -11, "CYOW": -16, "CYQB": -12, "CYQT": -18, "CYHM": -16, "CYFB": -26,
+  "SKBO": 9, "SPJC": 18, "SEQM": 9, "MUHA": 16, "MKJP": 22, "MPTO": 26,
 
   // UTC-6 - Central US, Mexico, Central America
-  "KDFW": 7, "KIAH": 6, "KAUS": 8, "KMSP": -15, "KSTL": -2, "KMSY": 4, "CYWG": -20, "MMMX": 8, "MMUN": 15, "MGGT": 13, "MHTG": 19, "MSSS": 24, "MNMG": 23, "MROC": 23,
+  "KDFW": 7, "KIAH": 6, "KAUS": 8, "KMSP": -15, "KSTL": -2, "KMSY": 4,
+  "CYWG": -20, "CYQR": -18, "CYXE": -20,
+  "MMMX": 8, "MMUN": 15, "MGGT": 13, "MHTG": 19, "MSSS": 24, "MNMG": 23, "MROC": 23,
 
   // UTC-7 - Mountain US/Canada, Mexico
-  "KDEN": 5, "KPHX": 15, "KSLC": -1, "KABQ": 3, "KELP": 10, "KBOI": -3, "CYYC": -4, "CYEG": -6, "MMCU": 10, "MMHO": 18,
+  "KDEN": 5, "KPHX": 15, "KSLC": -1, "KABQ": 3, "KELP": 10, "KBOI": -3,
+  "CYYC": -4, "CYEG": -6, "CYZF": -28, "CYXY": -18, "MMCU": 10, "MMHO": 18,
 
   // UTC-8 - Pacific US/Canada
-  "KLAX": 15, "KSFO": 11, "KSEA": 1, "KSAN": 16, "KLAS": 8, "KPDX": 2, "CYVR": 3, "MMTJ": 16,
+  "KLAX": 15, "KSFO": 11, "KSEA": 1, "KSAN": 16, "KLAS": 8, "KPDX": 2,
+  "CYVR": 3, "CYYJ": 4, "CYLW": -2, "MMTJ": 16,
 
   // UTC-9 - Alaska
   "PANC": -9, "PAFA": -38, "PAJN": 2,
