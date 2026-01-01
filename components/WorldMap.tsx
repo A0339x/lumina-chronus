@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, memo, useState, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
+import { Loader2 } from 'lucide-react';
 import { FireworkEvent, TimezoneData } from '../types';
 import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
@@ -710,6 +711,14 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
+      {/* Loading overlay - shown while land mask is generating */}
+      {!landMask && (
+        <div className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-950/80 backdrop-blur-sm">
+          <Loader2 className="animate-spin text-indigo-500 mb-4" size={48} />
+          <p className="text-white/70 text-sm tracking-wide">Loading map...</p>
+        </div>
+      )}
+
       {/* Hidden canvas for land mask */}
       <canvas ref={maskCanvasRef} className="hidden" />
 
