@@ -13,6 +13,42 @@ export interface FlightPosition {
   onGround: boolean;
   lastUpdate: number; // Unix timestamp
   source?: string; // Which API provided this data
+  squawk?: string; // Transponder code (4-digit octal)
+}
+
+// Emergency transponder codes
+export const EMERGENCY_SQUAWKS: Record<string, { code: string; name: string; severity: 'critical' | 'warning'; description: string }> = {
+  '7500': { code: '7500', name: 'Hijacking', severity: 'critical', description: 'Aircraft hijacking or unlawful interference' },
+  '7600': { code: '7600', name: 'Radio Failure', severity: 'warning', description: 'Lost radio communications (NORDO)' },
+  '7700': { code: '7700', name: 'Emergency', severity: 'critical', description: 'General emergency declared' },
+  '7777': { code: '7777', name: 'Military Intercept', severity: 'critical', description: 'Military interceptor operations active' },
+  '7400': { code: '7400', name: 'Drone Lost Link', severity: 'warning', description: 'Unmanned aircraft lost control signal' },
+  '0000': { code: '0000', name: 'Transponder Issue', severity: 'warning', description: 'Possible transponder malfunction or military' },
+};
+
+// Informational transponder codes (not emergencies, but notable)
+export const INFO_SQUAWKS: Record<string, { code: string; name: string; description: string }> = {
+  '1200': { code: '1200', name: 'VFR (US)', description: 'Visual flight rules - no flight plan filed' },
+  '7000': { code: '7000', name: 'VFR (ICAO)', description: 'Visual flight rules - Europe/international' },
+  '2000': { code: '2000', name: 'No Code', description: 'Entering secondary radar coverage' },
+  '1000': { code: '1000', name: 'IFR Mode S', description: 'IFR flight with Mode S transponder' },
+  '7001': { code: '7001', name: 'VFR Special', description: 'VFR with special conditions' },
+  '7004': { code: '7004', name: 'Aerobatic', description: 'Aerobatic flight in progress' },
+  '7005': { code: '7005', name: 'Glider Tow', description: 'Aircraft towing a glider' },
+  '7006': { code: '7006', name: 'Glider', description: 'Glider or sailplane' },
+  '7007': { code: '7007', name: 'Helicopter', description: 'Helicopter operations' },
+  '1202': { code: '1202', name: 'Glider (US)', description: 'Glider without radio' },
+};
+
+export type AlertSeverity = 'normal' | 'warning' | 'critical' | 'info';
+
+export interface FlightAlert {
+  type: 'squawk' | 'position' | 'altitude';
+  severity: AlertSeverity;
+  code?: string;
+  name: string;
+  description: string;
+  timestamp: number;
 }
 
 export interface FlightInfo {
@@ -29,6 +65,8 @@ export interface FlightInfo {
   flightAttendant: string;
   status: 'Scheduled' | 'In Flight' | 'Landed' | 'Unknown';
   position: FlightPosition | null;
+  alerts: FlightAlert[]; // Active alerts for this flight
+  alertSeverity: AlertSeverity; // Highest severity alert
 }
 
 // ADS-B data sources in order of preference
@@ -116,7 +154,37 @@ function parseADSBv2Response(data: any, sourceName: string): FlightPosition | nu
     onGround: aircraft.alt_baro === 'ground' || aircraft.on_ground === true || (aircraft.alt_baro && aircraft.alt_baro < 100),
     lastUpdate: aircraft.seen_pos ? (Date.now() / 1000 - aircraft.seen_pos) : Date.now() / 1000,
     source: sourceName,
+    squawk: aircraft.squawk || undefined, // Transponder code
   };
+}
+
+// Check if a squawk code indicates an emergency
+function checkSquawkAlerts(squawk: string | undefined): FlightAlert[] {
+  if (!squawk) return [];
+
+  const alerts: FlightAlert[] = [];
+  const emergency = EMERGENCY_SQUAWKS[squawk as keyof typeof EMERGENCY_SQUAWKS];
+
+  if (emergency) {
+    alerts.push({
+      type: 'squawk',
+      severity: emergency.severity,
+      code: squawk,
+      name: emergency.name,
+      description: emergency.description,
+      timestamp: Date.now(),
+    });
+    console.warn(`[Flight] EMERGENCY SQUAWK DETECTED: ${squawk} - ${emergency.name}`);
+  }
+
+  return alerts;
+}
+
+// Get the highest severity from a list of alerts
+function getHighestSeverity(alerts: FlightAlert[]): AlertSeverity {
+  if (alerts.some(a => a.severity === 'critical')) return 'critical';
+  if (alerts.some(a => a.severity === 'warning')) return 'warning';
+  return 'normal';
 }
 
 // Fetch from a single ADS-B source
@@ -254,11 +322,17 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
   for (const [callsign, position] of positions) {
     const knownInfo = KNOWN_FLIGHTS[callsign];
 
+    // Check for emergency squawk codes
+    const alerts = checkSquawkAlerts(position.squawk);
+    const alertSeverity = getHighestSeverity(alerts);
+
     if (knownInfo) {
       newCache.set(callsign, {
         ...knownInfo,
         status: position.onGround ? 'Landed' : 'In Flight',
         position,
+        alerts,
+        alertSeverity,
       });
     } else {
       newCache.set(callsign, {
@@ -275,6 +349,8 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
         flightAttendant: 'The Best Flight Attendant',
         status: position.onGround ? 'Landed' : 'In Flight',
         position,
+        alerts,
+        alertSeverity,
       });
     }
   }
@@ -311,6 +387,8 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
               velocity: 0,
               onGround: true,
             },
+            alerts: [],
+            alertSeverity: 'normal',
           });
         } else {
           // Still in transit (possibly lost signal at cruise altitude)
@@ -327,6 +405,8 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
           ...knownInfo,
           status: 'Scheduled',
           position: null,
+          alerts: [],
+          alertSeverity: 'normal',
         });
       }
     }
@@ -400,6 +480,69 @@ export function getDataSourceStatus(): { name: string; errors: number; lastReque
     errors: s.errors,
     lastRequest: s.lastRequest,
   }));
+}
+
+// Check if a flight has any active alerts
+export function hasAlerts(flight: FlightInfo): boolean {
+  return flight.alerts.length > 0;
+}
+
+// Check if a flight has critical alerts (7500 hijacking, 7700 emergency)
+export function hasCriticalAlert(flight: FlightInfo): boolean {
+  return flight.alertSeverity === 'critical';
+}
+
+// Get squawk code description for display
+export function getSquawkDescription(squawk: string | undefined): string {
+  if (!squawk) return 'No transponder signal';
+
+  const emergency = EMERGENCY_SQUAWKS[squawk];
+  if (emergency) {
+    return `${emergency.name}: ${emergency.description}`;
+  }
+
+  const info = INFO_SQUAWKS[squawk];
+  if (info) {
+    return `${info.name}: ${info.description}`;
+  }
+
+  return `Transponder code: ${squawk}`;
+}
+
+// Format squawk for display with visual indicator
+export function formatSquawkStatus(flight: FlightInfo): {
+  code: string;
+  status: 'normal' | 'warning' | 'critical' | 'info';
+  label: string;
+  description: string;
+} {
+  const squawk = flight.position?.squawk;
+
+  if (!squawk) {
+    return { code: '----', status: 'normal', label: 'No signal', description: 'No transponder signal received' };
+  }
+
+  const emergency = EMERGENCY_SQUAWKS[squawk];
+  if (emergency) {
+    return {
+      code: squawk,
+      status: emergency.severity,
+      label: emergency.name,
+      description: emergency.description
+    };
+  }
+
+  const info = INFO_SQUAWKS[squawk];
+  if (info) {
+    return {
+      code: squawk,
+      status: 'info',
+      label: info.name,
+      description: info.description
+    };
+  }
+
+  return { code: squawk, status: 'normal', label: 'Discrete', description: 'ATC-assigned transponder code' };
 }
 
 // List of flights we want to track

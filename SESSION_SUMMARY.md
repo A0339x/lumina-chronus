@@ -5,6 +5,30 @@ A New Year's countdown visualization app that displays a world map with airport 
 
 ## Recent Session Changes (Latest First)
 
+### Transponder Squawk Code Monitoring
+- Added squawk code parsing from ADS-B data
+- Squawk code displayed in flight tooltip with color-coded status
+- **Emergency codes** (critical/warning with pulsing indicator):
+  - **7500** - Hijacking (critical)
+  - **7600** - Radio Failure (warning)
+  - **7700** - General Emergency (critical)
+  - **7777** - Military Intercept (critical)
+  - **7400** - Drone Lost Link (warning)
+  - **0000** - Transponder Issue (warning)
+- **Informational codes** (blue indicator with description):
+  - **1200** - VFR (US) - no flight plan filed
+  - **7000** - VFR (ICAO) - Europe/international
+  - **2000** - No Code - entering secondary radar
+  - **1000** - IFR Mode S
+  - **7001** - VFR Special conditions
+  - **7004** - Aerobatic flight
+  - **7005/7006** - Glider operations
+  - **7007** - Helicopter operations
+  - **1202** - Glider (US)
+- FlightInfo includes `alerts` array and `alertSeverity` field
+- Helper functions: `hasAlerts()`, `hasCriticalAlert()`, `formatSquawkStatus()`
+- File: `services/flightService.ts`
+
 ### Multi-Source ADS-B Flight Tracking
 - Implemented automatic fallback between multiple free ADS-B sources
 - Sources in order of preference:
@@ -95,3 +119,16 @@ A New Year's countdown visualization app that displays a world map with airport 
 - Blitzortung: Free WebSocket, no API key
 - NOAA: Free, no API key
 - ADS-B community networks: Free with rate limits
+
+## Research Notes
+
+### Aircraft Radio Communications
+- **LiveATC**: Main source for ATC audio streams, but Terms of Service prohibit third-party programmatic use
+- Alternative: Link directly to LiveATC feeds rather than embedded audio
+- ATC audio streaming requires special authorization/agreements
+
+### Transponder Squawk Codes
+- Available in ADS-B data (`squawk` field)
+- Emergency codes: 7500, 7600, 7700, 7777, 7400, 0000
+- Informational codes: 1200, 7000, 2000, 1000, 7001, 7004-7007, 1202
+- Discrete codes (4-digit) are ATC-assigned and have no universal meaning

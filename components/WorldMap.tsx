@@ -4,7 +4,7 @@ import { FireworkEvent, TimezoneData } from '../types';
 import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportConditions, WeatherCondition, WeatherIntensity } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
-import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, TRACKED_FLIGHTS } from '../services/flightService';
+import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, TRACKED_FLIGHTS, formatSquawkStatus } from '../services/flightService';
 import { LightningStrike, subscribeLightning, connectLightning, disconnectLightning } from '../services/lightningService';
 import { ISSPosition, fetchISSPosition, getInterpolatedISSPosition, formatVelocity, formatAltitude } from '../services/issService';
 
@@ -126,7 +126,7 @@ const getWeatherConditionLabel = (condition: WeatherCondition, intensity: Weathe
 };
 
 // Fallback flight data when AC999 is not in the air
-const FALLBACK_FLIGHT = {
+const FALLBACK_FLIGHT: FlightInfo = {
   flightNumber: 'AC999',
   callsign: 'ACA999',
   airline: 'Air Canada',
@@ -140,6 +140,8 @@ const FALLBACK_FLIGHT = {
   flightAttendant: 'The Best Flight Attendant',
   status: 'Scheduled' as const,
   position: null,
+  alerts: [],
+  alertSeverity: 'normal',
 };
 
 // Calculate heading/bearing between two points
@@ -1373,11 +1375,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 <span className="text-white/60 text-sm">{flightHoverInfo.flight.airline}</span>
               </div>
               <div className="flex items-center gap-2">
-                {flightHoverInfo.flight.position && (
-                  <span className="text-[10px] px-1.5 py-0.5 bg-cyan-500/20 text-cyan-400 rounded-full">
-                    LIVE
-                  </span>
-                )}
                 <span className={`text-xs px-2 py-0.5 rounded-full ${
                   flightHoverInfo.flight.status === 'In Flight'
                     ? 'bg-emerald-500/20 text-emerald-400'
@@ -1389,6 +1386,21 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 </span>
               </div>
             </div>
+
+            {/* Live tracking source */}
+            {flightHoverInfo.flight.position?.source && (
+              <div className="text-[10px] text-cyan-400/70 mb-2 flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse"></span>
+                {(() => {
+                  const source = flightHoverInfo.flight.position.source;
+                  if (source === 'adsb.fi') return 'Live from volunteer radar network in Finland';
+                  if (source === 'ADSB.lol') return 'Live from community flight trackers';
+                  if (source === 'airplanes.live') return 'Live from global volunteer network';
+                  if (source === 'OpenSky') return 'Live from OpenSky research network';
+                  return `Live tracking active`;
+                })()}
+              </div>
+            )}
 
             {/* Route */}
             <div className="flex items-center gap-2 mb-3">
@@ -1442,26 +1454,85 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
             {/* Live flight data (altitude, speed, distance flown) */}
             {flightHoverInfo.flight.position && (
-              <div className="grid grid-cols-3 gap-2 text-center border-t border-cyan-400/20 pt-2 mb-3">
-                <div>
-                  <p className="text-[10px] text-cyan-400/60 uppercase">Altitude</p>
-                  <p className="text-cyan-300 text-xs font-medium">
-                    {Math.round(flightHoverInfo.flight.position.altitude * 3.28084).toLocaleString()} ft
-                  </p>
+              <>
+                <div className="grid grid-cols-3 gap-2 text-center border-t border-cyan-400/20 pt-2 mb-3">
+                  <div>
+                    <p className="text-[10px] text-cyan-400/60 uppercase">Altitude</p>
+                    <p className="text-cyan-300 text-xs font-medium">
+                      {Math.round(flightHoverInfo.flight.position.altitude * 3.28084).toLocaleString()} ft
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-cyan-400/60 uppercase">Speed</p>
+                    <p className="text-cyan-300 text-xs font-medium">
+                      {Math.round(flightHoverInfo.flight.position.velocity * 1.944)} kts
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-cyan-400/60 uppercase">Flown</p>
+                    <p className="text-cyan-300 text-xs font-medium">
+                      {Math.round(calculateDistanceFlown(flightHoverInfo.flight)).toLocaleString()} km
+                    </p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-[10px] text-cyan-400/60 uppercase">Speed</p>
-                  <p className="text-cyan-300 text-xs font-medium">
-                    {Math.round(flightHoverInfo.flight.position.velocity * 1.944)} kts
-                  </p>
-                </div>
-                <div>
-                  <p className="text-[10px] text-cyan-400/60 uppercase">Flown</p>
-                  <p className="text-cyan-300 text-xs font-medium">
-                    {Math.round(calculateDistanceFlown(flightHoverInfo.flight)).toLocaleString()} km
-                  </p>
-                </div>
-              </div>
+
+                {/* Transponder squawk code */}
+                {(() => {
+                  const squawkStatus = formatSquawkStatus(flightHoverInfo.flight);
+                  const isEmergency = squawkStatus.status === 'critical' || squawkStatus.status === 'warning';
+                  const isInfo = squawkStatus.status === 'info';
+                  return (
+                    <div className={`rounded-lg mb-3 ${
+                      squawkStatus.status === 'critical' ? 'bg-red-500/20 border border-red-500/40' :
+                      squawkStatus.status === 'warning' ? 'bg-amber-500/20 border border-amber-500/40' :
+                      squawkStatus.status === 'info' ? 'bg-blue-500/10 border border-blue-500/20' :
+                      'bg-slate-700/30'
+                    }`}>
+                      <div className="flex items-center justify-between px-2 py-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] text-white/50 uppercase">Squawk</span>
+                          <span className={`font-mono font-bold text-sm ${
+                            squawkStatus.status === 'critical' ? 'text-red-400' :
+                            squawkStatus.status === 'warning' ? 'text-amber-400' :
+                            squawkStatus.status === 'info' ? 'text-blue-300' :
+                            'text-white/80'
+                          }`}>
+                            {squawkStatus.code}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          {isEmergency && (
+                            <span className={`w-2 h-2 rounded-full animate-pulse ${
+                              squawkStatus.status === 'critical' ? 'bg-red-500' : 'bg-amber-500'
+                            }`}></span>
+                          )}
+                          {isInfo && (
+                            <span className="w-2 h-2 rounded-full bg-blue-400/50"></span>
+                          )}
+                          <span className={`text-[10px] font-medium ${
+                            squawkStatus.status === 'critical' ? 'text-red-400' :
+                            squawkStatus.status === 'warning' ? 'text-amber-400' :
+                            squawkStatus.status === 'info' ? 'text-blue-300' :
+                            'text-white/50'
+                          }`}>
+                            {squawkStatus.label}
+                          </span>
+                        </div>
+                      </div>
+                      {/* Show description for non-normal codes */}
+                      {(isEmergency || isInfo) && (
+                        <div className={`px-2 pb-1.5 text-[9px] ${
+                          squawkStatus.status === 'critical' ? 'text-red-300/70' :
+                          squawkStatus.status === 'warning' ? 'text-amber-300/70' :
+                          'text-blue-200/60'
+                        }`}>
+                          {squawkStatus.description}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
+              </>
             )}
 
             {/* Flight Attendant */}
