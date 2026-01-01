@@ -13,28 +13,44 @@ export interface NearestAirportInfo {
   distance: number; // in degrees (approximate)
 }
 
-// Major airports worldwide covering all inhabited areas
+// Major airports worldwide covering all inhabited areas including small islands
 const AIRPORTS: Airport[] = [
   // UTC+14 to UTC+12 - Pacific Islands & New Zealand
   { icao: "NZAA", lat: -37.01, lng: 174.79, name: "Auckland" },
   { icao: "NZWN", lat: -41.33, lng: 174.81, name: "Wellington" },
   { icao: "NZCH", lat: -43.49, lng: 172.53, name: "Christchurch" },
+  { icao: "NZQN", lat: -45.02, lng: 168.74, name: "Queenstown" },
   { icao: "NFFN", lat: -17.75, lng: 177.44, name: "Nadi" },
+  { icao: "NFNA", lat: -18.04, lng: 178.56, name: "Suva" },
   { icao: "UHPP", lat: 53.17, lng: 158.45, name: "Petropavlovsk" },
+  { icao: "PLCH", lat: 1.98, lng: -157.35, name: "Christmas Island" },
+  { icao: "NGTA", lat: 1.38, lng: 173.15, name: "Tarawa" },
+  { icao: "NGFU", lat: -0.53, lng: 176.32, name: "Funafuti" },
+  { icao: "NLWW", lat: -13.24, lng: -176.20, name: "Wallis Island" },
+  { icao: "NSFA", lat: -13.83, lng: -171.78, name: "Apia" },
+  { icao: "NFTF", lat: -21.24, lng: -175.15, name: "Tongatapu" },
 
-  // UTC+11 - Solomon Islands, Vanuatu
+  // UTC+11 - Solomon Islands, Vanuatu, New Caledonia
   { icao: "NVVV", lat: -17.70, lng: 168.32, name: "Port Vila" },
   { icao: "AGGH", lat: -9.43, lng: 160.05, name: "Honiara" },
   { icao: "NWWW", lat: -22.27, lng: 166.47, name: "Nouméa" },
   { icao: "UHMM", lat: 59.91, lng: 150.72, name: "Magadan" },
+  { icao: "ANYN", lat: -0.55, lng: 166.92, name: "Nauru" },
+  { icao: "PTKK", lat: 7.46, lng: 151.84, name: "Chuuk" },
+  { icao: "PTPN", lat: 6.98, lng: 158.21, name: "Pohnpei" },
 
-  // UTC+10 - Eastern Australia, Papua New Guinea
+  // UTC+10 - Eastern Australia, Papua New Guinea, Micronesia
   { icao: "YSSY", lat: -33.95, lng: 151.18, name: "Sydney" },
   { icao: "YMML", lat: -37.67, lng: 144.84, name: "Melbourne" },
   { icao: "YBBN", lat: -27.38, lng: 153.12, name: "Brisbane" },
+  { icao: "YBCS", lat: -16.89, lng: 145.76, name: "Cairns" },
+  { icao: "YBCG", lat: -28.16, lng: 153.51, name: "Gold Coast" },
   { icao: "AYPY", lat: -5.86, lng: 145.39, name: "Port Moresby" },
   { icao: "UHWW", lat: 43.40, lng: 132.15, name: "Vladivostok" },
   { icao: "PGUM", lat: 13.48, lng: 144.80, name: "Guam" },
+  { icao: "PGSN", lat: 15.12, lng: 145.73, name: "Saipan" },
+  { icao: "PTRO", lat: 7.33, lng: 134.54, name: "Palau" },
+  { icao: "PWAK", lat: 19.28, lng: 166.64, name: "Wake Island" },
 
   // UTC+9:30 - Central Australia
   { icao: "YPAD", lat: -34.94, lng: 138.53, name: "Adelaide" },
@@ -102,7 +118,7 @@ const AIRPORTS: Airport[] = [
   // UTC+4:30 - Afghanistan
   { icao: "OAKB", lat: 34.57, lng: 69.21, name: "Kabul" },
 
-  // UTC+4 - UAE, Gulf, Caucasus
+  // UTC+4 - UAE, Gulf, Caucasus, Indian Ocean
   { icao: "OMDB", lat: 25.25, lng: 55.36, name: "Dubai" },
   { icao: "OMAA", lat: 24.44, lng: 54.65, name: "Abu Dhabi" },
   { icao: "OOMS", lat: 23.60, lng: 58.28, name: "Muscat" },
@@ -111,6 +127,9 @@ const AIRPORTS: Airport[] = [
   { icao: "UDYZ", lat: 40.15, lng: 44.40, name: "Yerevan" },
   { icao: "FIMP", lat: -20.43, lng: 57.68, name: "Mauritius" },
   { icao: "FMEE", lat: -20.89, lng: 55.52, name: "Réunion" },
+  { icao: "FSIA", lat: -4.67, lng: 55.52, name: "Seychelles" },
+  { icao: "VRMM", lat: 4.19, lng: 73.53, name: "Maldives Malé" },
+  { icao: "OOBR", lat: 26.27, lng: 50.64, name: "Bahrain" },
 
   // UTC+3:30 - Iran
   { icao: "OIIE", lat: 35.69, lng: 51.31, name: "Tehran" },
@@ -131,7 +150,7 @@ const AIRPORTS: Airport[] = [
   { icao: "HTDA", lat: -6.88, lng: 39.20, name: "Dar es Salaam" },
   { icao: "FMMI", lat: -18.80, lng: 47.48, name: "Antananarivo" },
 
-  // UTC+2 - Eastern Europe, Southern Africa
+  // UTC+2 - Eastern Europe, Southern Africa, Mediterranean Islands
   { icao: "HECA", lat: 30.11, lng: 31.40, name: "Cairo" },
   { icao: "LGAV", lat: 37.94, lng: 23.94, name: "Athens" },
   { icao: "LLBG", lat: 32.01, lng: 34.89, name: "Tel Aviv" },
@@ -142,8 +161,17 @@ const AIRPORTS: Airport[] = [
   { icao: "FAOR", lat: -26.13, lng: 28.24, name: "Johannesburg" },
   { icao: "FACT", lat: -33.97, lng: 18.60, name: "Cape Town" },
   { icao: "FVHA", lat: -17.93, lng: 31.09, name: "Harare" },
+  // Mediterranean Islands
+  { icao: "LCLK", lat: 34.88, lng: 33.63, name: "Cyprus Larnaca" },
+  { icao: "LCPH", lat: 34.72, lng: 32.49, name: "Cyprus Paphos" },
+  { icao: "LGIR", lat: 35.34, lng: 25.18, name: "Crete Heraklion" },
+  { icao: "LGKR", lat: 39.60, lng: 19.91, name: "Corfu" },
+  { icao: "LGSR", lat: 36.40, lng: 25.48, name: "Santorini" },
+  { icao: "LGKO", lat: 36.79, lng: 27.09, name: "Kos" },
+  { icao: "LGRP", lat: 36.41, lng: 28.09, name: "Rhodes" },
+  { icao: "LMML", lat: 35.86, lng: 14.48, name: "Malta" },
 
-  // UTC+1 - Central Europe, West Africa
+  // UTC+1 - Central Europe, West Africa, Western Mediterranean Islands
   { icao: "LFPG", lat: 49.01, lng: 2.55, name: "Paris CDG" },
   { icao: "EDDF", lat: 50.03, lng: 8.57, name: "Frankfurt" },
   { icao: "EDDM", lat: 48.35, lng: 11.79, name: "Munich" },
@@ -163,8 +191,17 @@ const AIRPORTS: Airport[] = [
   { icao: "DNMM", lat: 6.58, lng: 3.32, name: "Lagos" },
   { icao: "DAAG", lat: 36.69, lng: 3.22, name: "Algiers" },
   { icao: "DTTA", lat: 36.85, lng: 10.23, name: "Tunis" },
+  // Western Mediterranean Islands
+  { icao: "LIEE", lat: 39.25, lng: 9.05, name: "Sardinia Cagliari" },
+  { icao: "LIEO", lat: 40.90, lng: 9.52, name: "Sardinia Olbia" },
+  { icao: "LFKJ", lat: 41.92, lng: 8.80, name: "Corsica Ajaccio" },
+  { icao: "LEIB", lat: 38.87, lng: 1.37, name: "Ibiza" },
+  { icao: "LEPA", lat: 39.55, lng: 2.74, name: "Mallorca" },
+  { icao: "LEMH", lat: 39.86, lng: 4.22, name: "Menorca" },
+  { icao: "LICC", lat: 37.47, lng: 15.07, name: "Sicily Catania" },
+  { icao: "LICJ", lat: 38.18, lng: 13.10, name: "Sicily Palermo" },
 
-  // UTC+0 - UK, Portugal, West Africa
+  // UTC+0 - UK, Portugal, West Africa, Canary Islands
   { icao: "EGLL", lat: 51.47, lng: -0.46, name: "London Heathrow" },
   { icao: "EGKK", lat: 51.15, lng: -0.18, name: "London Gatwick" },
   { icao: "EIDW", lat: 53.43, lng: -6.27, name: "Dublin" },
@@ -173,10 +210,28 @@ const AIRPORTS: Airport[] = [
   { icao: "DGAA", lat: 5.61, lng: -0.17, name: "Accra" },
   { icao: "GOBD", lat: 14.67, lng: -17.07, name: "Dakar" },
   { icao: "GMMN", lat: 33.37, lng: -7.59, name: "Casablanca" },
+  // Canary Islands & Madeira
+  { icao: "GCTS", lat: 28.04, lng: -16.57, name: "Tenerife South" },
+  { icao: "GCXO", lat: 28.48, lng: -16.34, name: "Tenerife North" },
+  { icao: "GCLP", lat: 27.93, lng: -15.39, name: "Gran Canaria" },
+  { icao: "GCLA", lat: 28.63, lng: -17.76, name: "La Palma" },
+  { icao: "GCRR", lat: 28.95, lng: -13.61, name: "Lanzarote" },
+  { icao: "GCFV", lat: 28.45, lng: -13.86, name: "Fuerteventura" },
+  { icao: "LPMA", lat: 32.70, lng: -16.77, name: "Madeira" },
+  // Channel Islands & Isle of Man
+  { icao: "EGJJ", lat: 49.21, lng: -2.20, name: "Jersey" },
+  { icao: "EGJB", lat: 49.44, lng: -2.60, name: "Guernsey" },
+  { icao: "EGNS", lat: 54.08, lng: -4.63, name: "Isle of Man" },
+  // Faroe Islands
+  { icao: "EKVG", lat: 62.07, lng: -7.28, name: "Faroe Islands" },
 
   // UTC-1 - Cape Verde, Azores
   { icao: "GVNP", lat: 14.92, lng: -23.49, name: "Praia" },
+  { icao: "GVSV", lat: 16.83, lng: -25.06, name: "São Vicente" },
+  { icao: "GVBA", lat: 16.14, lng: -22.89, name: "Boa Vista CV" },
   { icao: "LPAZ", lat: 36.97, lng: -25.17, name: "Ponta Delgada" },
+  { icao: "LPHR", lat: 38.52, lng: -28.72, name: "Horta Azores" },
+  { icao: "LPLA", lat: 38.76, lng: -27.09, name: "Terceira Azores" },
 
   // UTC-3 - Brazil, Argentina
   { icao: "SBGR", lat: -23.43, lng: -46.47, name: "São Paulo" },
@@ -201,6 +256,26 @@ const AIRPORTS: Airport[] = [
   { icao: "MDSD", lat: 18.43, lng: -69.67, name: "Santo Domingo" },
   { icao: "SVMI", lat: 10.60, lng: -66.99, name: "Caracas" },
   { icao: "SBBV", lat: 2.84, lng: -60.69, name: "Boa Vista" },
+  // Caribbean Islands
+  { icao: "TAPA", lat: 17.14, lng: -61.79, name: "Antigua" },
+  { icao: "TBPB", lat: 13.07, lng: -59.49, name: "Barbados" },
+  { icao: "TLPC", lat: 14.02, lng: -60.99, name: "St. Lucia" },
+  { icao: "TGPY", lat: 12.00, lng: -61.79, name: "Grenada" },
+  { icao: "TTPP", lat: 10.60, lng: -61.34, name: "Trinidad" },
+  { icao: "TNCC", lat: 12.19, lng: -68.96, name: "Curaçao" },
+  { icao: "TNCM", lat: 18.04, lng: -63.11, name: "St. Maarten" },
+  { icao: "TFFR", lat: 16.27, lng: -61.53, name: "Guadeloupe" },
+  { icao: "TFFF", lat: 14.59, lng: -61.00, name: "Martinique" },
+  { icao: "MYNN", lat: 25.04, lng: -77.47, name: "Nassau" },
+  { icao: "MBPV", lat: 21.77, lng: -72.27, name: "Turks & Caicos" },
+  { icao: "TIST", lat: 18.34, lng: -64.97, name: "St. Thomas USVI" },
+  { icao: "TKPK", lat: 17.31, lng: -62.72, name: "St. Kitts" },
+  { icao: "TDPD", lat: 15.55, lng: -61.30, name: "Dominica" },
+  { icao: "TVSV", lat: 13.14, lng: -61.21, name: "St. Vincent" },
+  { icao: "TRPG", lat: 16.79, lng: -62.19, name: "Montserrat" },
+  { icao: "TQPF", lat: 18.20, lng: -63.05, name: "Anguilla" },
+  { icao: "MWCR", lat: 19.29, lng: -81.36, name: "Grand Cayman" },
+  { icao: "TXKF", lat: 32.36, lng: -64.68, name: "Bermuda" },
 
   // UTC-5 - Eastern US/Canada, Colombia, Peru
   { icao: "KJFK", lat: 40.64, lng: -73.78, name: "New York JFK" },
@@ -277,26 +352,47 @@ const AIRPORTS: Airport[] = [
   { icao: "PAFA", lat: 64.81, lng: -147.86, name: "Fairbanks" },
   { icao: "PAJN", lat: 58.36, lng: -134.58, name: "Juneau" },
 
-  // UTC-10 - Hawaii, Tahiti
+  // UTC-10 - Hawaii, Tahiti, Cook Islands
   { icao: "PHNL", lat: 21.32, lng: -157.92, name: "Honolulu" },
   { icao: "PHOG", lat: 20.90, lng: -156.43, name: "Kahului" },
+  { icao: "PHKO", lat: 19.74, lng: -156.05, name: "Kona" },
+  { icao: "PHLI", lat: 21.98, lng: -159.34, name: "Lihue Kauai" },
   { icao: "NTAA", lat: -17.55, lng: -149.61, name: "Papeete" },
+  { icao: "NTTB", lat: -16.44, lng: -151.75, name: "Bora Bora" },
+  { icao: "NCAI", lat: -21.20, lng: -159.80, name: "Rarotonga" },
 
-  // UTC-11 - American Samoa
+  // UTC-11 - American Samoa, Niue
   { icao: "NSTU", lat: -14.33, lng: -170.71, name: "Pago Pago" },
+  { icao: "NIUE", lat: -19.08, lng: -169.93, name: "Niue" },
+  { icao: "PMDY", lat: 28.20, lng: -177.38, name: "Midway Atoll" },
+
+  // Remote South Atlantic
+  { icao: "SFAL", lat: -51.69, lng: -57.78, name: "Falkland Islands" },
+  { icao: "FHAW", lat: -7.97, lng: -14.39, name: "Ascension Island" },
+  { icao: "FHSH", lat: -15.96, lng: -5.67, name: "St. Helena" },
+
+  // Remote South Pacific
+  { icao: "SCIP", lat: -27.16, lng: -109.42, name: "Easter Island" },
+  { icao: "NCRG", lat: -21.20, lng: -159.81, name: "Cook Islands" },
+
+  // French Southern Territories
+  { icao: "FMCZ", lat: -12.13, lng: 44.43, name: "Mayotte" },
+  { icao: "FMCH", lat: -11.53, lng: 43.27, name: "Comoros" },
 ];
 
 // Hardcoded temperatures - auto-updated every 6 hours by GitHub Actions
 // Last updated: 2026-01-01T11:40:44.694Z
 const HARDCODED_TEMPS: Record<string, number> = {
   // UTC+14 to UTC+12 - Pacific Islands & New Zealand
-  "NZAA": 19, "NZWN": 17, "NZCH": 14, "NFFN": 27, "UHPP": -3,
+  "NZAA": 19, "NZWN": 17, "NZCH": 14, "NZQN": 18, "NFFN": 27, "NFNA": 28, "UHPP": -3,
+  "PLCH": 28, "NGTA": 30, "NGFU": 29, "NLWW": 28, "NSFA": 29, "NFTF": 27,
 
   // UTC+11 - Solomon Islands, Vanuatu
-  "NVVV": 26, "AGGH": 28, "NWWW": 28, "UHMM": -16,
+  "NVVV": 26, "AGGH": 28, "NWWW": 28, "UHMM": -16, "ANYN": 29, "PTKK": 28, "PTPN": 28,
 
-  // UTC+10 - Eastern Australia, Papua New Guinea
-  "YSSY": 15, "YMML": 14, "YBBN": 24, "AYPY": 15, "UHWW": -13, "PGUM": 28,
+  // UTC+10 - Eastern Australia, Papua New Guinea, Micronesia
+  "YSSY": 15, "YMML": 14, "YBBN": 24, "YBCS": 28, "YBCG": 26, "AYPY": 15, "UHWW": -13,
+  "PGUM": 28, "PGSN": 27, "PTRO": 28, "PWAK": 26,
 
   // UTC+9:30 - Central Australia
   "YPAD": 20, "YPDN": 29,
@@ -328,8 +424,9 @@ const HARDCODED_TEMPS: Record<string, number> = {
   // UTC+4:30 - Afghanistan
   "OAKB": 6,
 
-  // UTC+4 - UAE, Gulf, Caucasus
+  // UTC+4 - UAE, Gulf, Caucasus, Indian Ocean
   "OMDB": 22, "OMAA": 22, "OOMS": 24, "UBBB": 6, "UGGG": 5, "UDYZ": 0, "FIMP": 26, "FMEE": 28,
+  "FSIA": 28, "VRMM": 28, "OOBR": 20,
 
   // UTC+3:30 - Iran
   "OIIE": 9, "OIMM": 10,
@@ -337,17 +434,21 @@ const HARDCODED_TEMPS: Record<string, number> = {
   // UTC+3 - Moscow, East Africa, Middle East
   "UUEE": -10, "UUDD": -10, "ULLI": -7, "LTFM": 2, "OERK": 24, "OEJN": 29, "ORBI": 17, "OTHH": 21, "OKBK": 21, "HKJK": 23, "HAAB": 23, "HTDA": 30, "FMMI": 25,
 
-  // UTC+2 - Eastern Europe, Southern Africa
+  // UTC+2 - Eastern Europe, Southern Africa, Mediterranean Islands
   "HECA": 20, "LGAV": 7, "LLBG": 16, "UKBB": -9, "LROP": -1, "EFHK": -12, "LBSF": -1, "FAOR": 25, "FACT": 27, "FVHA": 27,
+  "LCLK": 15, "LCPH": 16, "LGIR": 14, "LGKR": 10, "LGSR": 13, "LGKO": 14, "LGRP": 14, "LMML": 15,
 
-  // UTC+1 - Central Europe, West Africa
+  // UTC+1 - Central Europe, West Africa, Western Mediterranean Islands
   "LFPG": 2, "EDDF": 2, "EDDM": 1, "LIRF": 10, "LEMD": 4, "LEBL": 11, "EHAM": 6, "EBBR": 4, "LOWW": 4, "EPWA": 0, "LKPR": 0, "LHBP": 3, "ESSA": 1, "EKCH": 4, "ENGM": -1, "LSZH": -1, "DNMM": 32, "DAAG": 15, "DTTA": 16,
+  "LIEE": 12, "LIEO": 10, "LFKJ": 11, "LEIB": 14, "LEPA": 13, "LEMH": 12, "LICC": 12, "LICJ": 13,
 
-  // UTC+0 - UK, Portugal, West Africa
+  // UTC+0 - UK, Portugal, West Africa, Canary Islands
   "EGLL": 4, "EGKK": 4, "EIDW": 4, "LPPT": 11, "BIKF": 4, "DGAA": 31, "GOBD": 29, "GMMN": 20,
+  "GCTS": 20, "GCXO": 18, "GCLP": 20, "GCLA": 18, "GCRR": 19, "GCFV": 19, "LPMA": 17,
+  "EGJJ": 8, "EGJB": 8, "EGNS": 6, "EKVG": 4,
 
   // UTC-1 - Cape Verde, Azores
-  "GVNP": 29, "LPAZ": 16,
+  "GVNP": 29, "GVSV": 24, "GVBA": 25, "LPAZ": 16, "LPHR": 14, "LPLA": 15,
 
   // UTC-3 - Brazil, Argentina
   "SBGR": 26, "SBGL": 31, "SBBR": 24, "SAEZ": 20, "SUMU": 24, "SCEL": 23, "SLLP": 6, "SGAS": 25,
@@ -357,6 +458,10 @@ const HARDCODED_TEMPS: Record<string, number> = {
 
   // UTC-4 - Atlantic Canada, Caribbean
   "CYHZ": -3, "TJSJ": 19, "MDSD": 24, "SVMI": 28, "SBBV": 26,
+  // Caribbean Islands
+  "TAPA": 26, "TBPB": 27, "TLPC": 27, "TGPY": 28, "TTPP": 28, "TNCC": 28, "TNCM": 27,
+  "TFFR": 27, "TFFF": 27, "MYNN": 24, "MBPV": 26, "TIST": 27, "TKPK": 27, "TDPD": 27,
+  "TVSV": 28, "TRPG": 27, "TQPF": 27, "MWCR": 26, "TXKF": 18,
 
   // UTC-5 - Eastern US/Canada, Colombia, Peru
   "KJFK": -1, "KLGA": -2, "KEWR": -2, "KORD": -11, "KATL": 1, "KMIA": 6, "KBOS": -1, "KDCA": -1, "KIAD": -1, "KPHL": -1, "KDTW": -12, "CYYZ": -14, "CYUL": -12, "CYOW": -16, "SKBO": 10, "SPJC": 18, "SEQM": 10, "MUHA": 16, "MKJP": 23, "MPTO": 26,
@@ -373,11 +478,20 @@ const HARDCODED_TEMPS: Record<string, number> = {
   // UTC-9 - Alaska
   "PANC": -9, "PAFA": -38, "PAJN": 1,
 
-  // UTC-10 - Hawaii, Tahiti
-  "PHNL": 23, "PHOG": 23, "NTAA": 27,
+  // UTC-10 - Hawaii, Tahiti, Cook Islands
+  "PHNL": 23, "PHOG": 23, "PHKO": 26, "PHLI": 24, "NTAA": 27, "NTTB": 28, "NCAI": 26,
 
-  // UTC-11 - American Samoa
-  "NSTU": 29,
+  // UTC-11 - American Samoa, Niue
+  "NSTU": 29, "NIUE": 27, "PMDY": 22,
+
+  // Remote South Atlantic
+  "SFAL": 10, "FHAW": 28, "FHSH": 22,
+
+  // Remote South Pacific
+  "SCIP": 22, "NCRG": 26,
+
+  // French Southern Territories
+  "FMCZ": 28, "FMCH": 27,
 
 };
 
