@@ -148,19 +148,31 @@ async function refreshWeather(env: Env, rateLimits: RateLimits): Promise<Weather
 }
 
 // WMO Weather Codes to our condition types
+// Only returns SIGNIFICANT weather - filters out light drizzle/rain
 // See: https://open-meteo.com/en/docs
 function parseWeatherCode(code: number): string | null {
-  // Thunderstorm (95-99)
+  // Thunderstorm (95-99) - always significant
   if (code >= 95) return 'thunderstorm';
-  // Snow showers (85-86) or snow fall (71-77)
-  if ((code >= 71 && code <= 77) || (code >= 85 && code <= 86)) return 'snow';
-  // Freezing rain/drizzle (56-57, 66-67)
+
+  // Snow - moderate/heavy only (73, 75, 77, 85-86)
+  // Skip slight snow (71)
+  if (code >= 73 && code <= 77) return 'snow';
+  if (code >= 85 && code <= 86) return 'snow'; // snow showers
+
+  // Freezing rain/drizzle (56-57, 66-67) - always hazardous
   if ((code >= 56 && code <= 57) || (code >= 66 && code <= 67)) return 'freezing';
-  // Rain (61-65) or rain showers (80-82) or drizzle (51-55)
-  if ((code >= 61 && code <= 65) || (code >= 80 && code <= 82) || (code >= 51 && code <= 55)) return 'rain';
-  // Fog (45-48)
+
+  // Rain - moderate/heavy only
+  // 63 = moderate rain, 65 = heavy rain
+  // 81 = moderate showers, 82 = violent showers
+  // Skip: 51-55 drizzle, 61 slight rain, 80 slight showers
+  if (code === 63 || code === 65) return 'rain';
+  if (code === 81 || code === 82) return 'rain';
+
+  // Fog (45-48) - always significant for visibility
   if (code >= 45 && code <= 48) return 'fog';
-  // Clear/cloudy - no significant weather
+
+  // Everything else (clear, cloudy, light precip) - not significant enough to display
   return null;
 }
 
