@@ -80,6 +80,22 @@ const getTimezoneLongitude = (offset: number): number => {
   return lng;
 };
 
+// Get local time at a location based on longitude
+const getLocalTime = (lng: number): string => {
+  const now = new Date();
+  // Calculate UTC offset from longitude (15° per hour)
+  const offsetHours = lng / 15;
+  // Get UTC time in milliseconds and add offset
+  const localTime = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
+  // Format as HH:MM with AM/PM
+  const hours = localTime.getUTCHours();
+  const minutes = localTime.getUTCMinutes();
+  const ampm = hours >= 12 ? 'PM' : 'AM';
+  const displayHours = hours % 12 || 12;
+  const displayMinutes = minutes.toString().padStart(2, '0');
+  return `${displayHours}:${displayMinutes} ${ampm}`;
+};
+
 interface WorldMapProps {
   activeFireworks: FireworkEvent[];
   pastTimezones: TimezoneData[];
@@ -821,9 +837,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 </h3>
                 {hoverInfo.airportInfo && (
                   <div className="border-t border-white/10 pt-2">
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex items-center justify-between mb-1">
                       <span className="text-[10px] uppercase tracking-widest text-white/40">
                         Nearest Station
+                      </span>
+                      <span className="text-[10px] text-amber-300/80 font-medium">
+                        {getLocalTime(hoverInfo.airportInfo.airport.lng)}
                       </span>
                     </div>
                     <p className="text-indigo-200 text-sm font-medium mb-1">
@@ -837,9 +856,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
               </>
             ) : hoverInfo.airportInfo && (
               <>
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center justify-between mb-1">
                   <span className="text-[10px] uppercase tracking-widest text-cyan-300/60">
                     Island / Coastal
+                  </span>
+                  <span className="text-[10px] text-amber-300/80 font-medium">
+                    {getLocalTime(hoverInfo.airportInfo.airport.lng)}
                   </span>
                 </div>
                 <p className="text-indigo-200 text-sm font-medium mb-1">
