@@ -19,16 +19,16 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
 
   // Calculate responsive icon sizes based on viewport - sized to fit all content on screen
   const globeSize = typeof window !== 'undefined'
-    ? Math.max(40, Math.min(80, window.innerHeight * 0.08))
+    ? Math.max(24, Math.min(80, window.innerHeight * 0.08))
     : 60;
   const heartSize = typeof window !== 'undefined'
-    ? Math.max(24, Math.min(48, window.innerHeight * 0.045))
+    ? Math.max(16, Math.min(48, window.innerHeight * 0.045))
     : 32;
   const sparkleSize = typeof window !== 'undefined'
-    ? Math.max(14, Math.min(24, window.innerHeight * 0.025))
+    ? Math.max(10, Math.min(24, window.innerHeight * 0.025))
     : 18;
   const mapIconSize = typeof window !== 'undefined'
-    ? Math.max(14, Math.min(20, window.innerHeight * 0.02))
+    ? Math.max(10, Math.min(20, window.innerHeight * 0.02))
     : 16;
 
   return (
@@ -41,7 +41,7 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
       transition={{ duration: isExiting ? 0.8 : 1.5, ease: "easeOut" }}
       className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-indigo-950/95 via-slate-950/98 to-slate-950/95 backdrop-blur-sm"
     >
-      <div className="text-center px-6 max-w-[90vw] lg:max-w-[70vw] xl:max-w-[60vw]">
+      <div className="text-center px-4 max-w-[95vw] overflow-hidden">
         {/* Animated globe icon */}
         <motion.div
           animate={{
@@ -60,7 +60,7 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5, duration: 1 }}
-          className="text-[clamp(1.5rem,3.5vw,2.75rem)] font-light text-white mb-[1.5vh] leading-tight"
+          className="text-[clamp(1rem,3.5vw,2.75rem)] font-light text-white mb-[1.5vh] leading-tight"
         >
           The World Has Celebrated
           <span className="block mt-[1vh] bg-gradient-to-r from-amber-200 via-pink-200 to-indigo-200 bg-clip-text text-transparent">
@@ -85,7 +85,7 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.2, duration: 1 }}
-          className="text-[clamp(0.875rem,1.8vw,1.125rem)] text-white/70 font-light leading-relaxed mb-[2vh]"
+          className="text-[clamp(0.65rem,1.8vw,1.125rem)] text-white/70 font-light leading-relaxed mb-[2vh]"
         >
           From the Line Islands to American Samoa, every corner of our planet
           has welcomed the new year. We shared the same sky, the same hope,
@@ -96,7 +96,7 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 1.8, duration: 1 }}
-          className="text-[clamp(1rem,2vw,1.35rem)] text-white/90 font-light italic mb-[2.5vh]"
+          className="text-[clamp(0.75rem,2vw,1.35rem)] text-white/90 font-light italic mb-[2.5vh]"
         >
           "Even as the world tries to divide us,
           <br className="hidden sm:block" />
@@ -123,7 +123,7 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ delay: 3, duration: 1 }}
-          className="mt-[2vh] text-[clamp(2rem,6vw,5rem)] font-thin text-white/20 tracking-widest"
+          className="mt-[2vh] text-[clamp(1.25rem,6vw,5rem)] font-thin text-white/20 tracking-widest"
         >
           2026
         </motion.p>
