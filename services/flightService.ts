@@ -1,6 +1,6 @@
-// Live flight tracking service using OpenSky Network API
-// Free API with 10-second resolution for anonymous users
-// https://openskynetwork.github.io/opensky-api/
+// Live flight tracking service
+// Uses Cloudflare Worker to proxy OpenSky with credentials
+// Worker handles rate limiting and caching
 
 export interface FlightPosition {
   icao24: string;
@@ -57,40 +57,7 @@ let backoffUntil = 0;
 let consecutiveErrors = 0;
 const MAX_BACKOFF = 300000; // 5 minutes max backoff
 
-// Parse OpenSky state vector into FlightPosition
-function parseStateVector(state: any[]): FlightPosition | null {
-  if (!state || state.length < 17) return null;
-
-  const [
-    icao24,      // 0: ICAO24 address
-    callsign,    // 1: Callsign
-    _country,    // 2: Origin country
-    _timePos,    // 3: Time of last position update
-    lastUpdate,  // 4: Time of last update
-    longitude,   // 5: Longitude
-    latitude,    // 6: Latitude
-    altitude,    // 7: Barometric altitude (meters)
-    onGround,    // 8: On ground flag
-    velocity,    // 9: Velocity (m/s)
-    heading,     // 10: Heading (degrees)
-  ] = state;
-
-  if (latitude === null || longitude === null) return null;
-
-  return {
-    icao24: icao24 || '',
-    callsign: (callsign || '').trim(),
-    latitude,
-    longitude,
-    altitude: altitude || 0,
-    velocity: velocity || 0,
-    heading: heading || 0,
-    onGround: onGround || false,
-    lastUpdate: lastUpdate || Date.now() / 1000,
-  };
-}
-
-// Fetch live flight data from OpenSky Network
+// Fetch live flight data via Cloudflare Worker
 export async function fetchFlightData(callsigns: string[]): Promise<Map<string, FlightInfo>> {
   const now = Date.now();
 
@@ -105,10 +72,9 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
   }
 
   try {
-    // Query a bounding box covering North America to Mexico
-    // This covers the Montreal to Puerto Vallarta route
+    // Call our Cloudflare Worker which proxies OpenSky with credentials
     const response = await fetch(
-      'https://opensky-network.org/api/states/all?lamin=15&lomin=-115&lamax=55&lomax=-60'
+      `/api/data?type=flights&callsigns=${callsigns.join(',')}`
     );
 
     if (!response.ok) {
@@ -125,49 +91,66 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
     // Success - reset error counter
     consecutiveErrors = 0;
 
-    const data = await response.json();
+    const data = await response.json() as { flights: Record<string, any> };
 
-    if (!data.states) {
-      return flightCache;
-    }
-
-    // Process all states and find our tracked flights
-    const newCache = new Map<string, FlightInfo>();
-
-    for (const state of data.states) {
-      const position = parseStateVector(state);
-      if (!position) continue;
-
-      const callsign = position.callsign;
-
-      // Check if this is one of our tracked flights
-      if (callsigns.includes(callsign)) {
+    if (!data.flights || Object.keys(data.flights).length === 0) {
+      // No flights found - mark tracked ones as unknown
+      const newCache = new Map<string, FlightInfo>();
+      for (const callsign of callsigns) {
         const knownInfo = KNOWN_FLIGHTS[callsign];
-
         if (knownInfo) {
           newCache.set(callsign, {
             ...knownInfo,
-            status: position.onGround ? 'Landed' : 'In Flight',
-            position,
-          });
-        } else {
-          // Unknown flight - create basic info
-          newCache.set(callsign, {
-            flightNumber: callsign.replace('ACA', 'AC'),
-            callsign,
-            airline: callsign.startsWith('ACA') ? 'Air Canada' : 'Unknown',
-            aircraft: 'Unknown',
-            origin: { icao: 'Unknown', name: 'Unknown', lat: 0, lng: 0 },
-            destination: { icao: 'Unknown', name: 'Unknown', lat: 0, lng: 0 },
-            departureTime: '--:--',
-            arrivalTime: '--:--',
-            duration: '--',
-            distance: '--',
-            flightAttendant: 'The Best Flight Attendant',
-            status: position.onGround ? 'Landed' : 'In Flight',
-            position,
+            status: 'Unknown',
+            position: null,
           });
         }
+      }
+      flightCache = newCache;
+      lastFetchTime = now;
+      return flightCache;
+    }
+
+    // Process flights returned by Worker
+    const newCache = new Map<string, FlightInfo>();
+
+    for (const [callsign, flightData] of Object.entries(data.flights)) {
+      const position: FlightPosition = {
+        icao24: flightData.icao24,
+        callsign: flightData.callsign,
+        latitude: flightData.latitude,
+        longitude: flightData.longitude,
+        altitude: flightData.altitude || 0,
+        velocity: flightData.velocity || 0,
+        heading: flightData.heading || 0,
+        onGround: flightData.onGround || false,
+        lastUpdate: flightData.lastUpdate || Date.now() / 1000,
+      };
+
+      const knownInfo = KNOWN_FLIGHTS[callsign];
+
+      if (knownInfo) {
+        newCache.set(callsign, {
+          ...knownInfo,
+          status: position.onGround ? 'Landed' : 'In Flight',
+          position,
+        });
+      } else {
+        newCache.set(callsign, {
+          flightNumber: callsign.replace('ACA', 'AC'),
+          callsign,
+          airline: callsign.startsWith('ACA') ? 'Air Canada' : 'Unknown',
+          aircraft: 'Unknown',
+          origin: { icao: 'Unknown', name: 'Unknown', lat: 0, lng: 0 },
+          destination: { icao: 'Unknown', name: 'Unknown', lat: 0, lng: 0 },
+          departureTime: '--:--',
+          arrivalTime: '--:--',
+          duration: '--',
+          distance: '--',
+          flightAttendant: 'The Best Flight Attendant',
+          status: position.onGround ? 'Landed' : 'In Flight',
+          position,
+        });
       }
     }
 

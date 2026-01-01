@@ -1,0 +1,18 @@
+# Cloudflare Pages configuration
+name = "lumina-chronos"
+compatibility_date = "2024-01-01"
+
+# KV Namespace for weather caching
+# Create this in Cloudflare dashboard: Workers & Pages > KV > Create namespace
+# Then add the binding here with your namespace ID
+[[kv_namespaces]]
+binding = "WEATHER_CACHE"
+id = "YOUR_KV_NAMESPACE_ID"  # Replace with actual ID from dashboard
+
+# Secrets (set via dashboard or wrangler CLI):
+# - OPENSKY_USERNAME
+# - OPENSKY_PASSWORD
+#
+# To set secrets:
+# npx wrangler pages secret put OPENSKY_USERNAME
+# npx wrangler pages secret put OPENSKY_PASSWORD
