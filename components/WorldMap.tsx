@@ -93,6 +93,9 @@ interface HoverInfo {
 const MAP_SCALE = 220;
 const MAP_CENTER_LNG = 0;
 const MAP_CENTER_LAT = 20;
+// react-simple-maps default SVG dimensions
+const SVG_WIDTH = 800;
+const SVG_HEIGHT = 600;
 
 // Convert screen coordinates to lat/lng based on equirectangular projection
 const screenToLatLng = (
@@ -101,22 +104,22 @@ const screenToLatLng = (
   containerWidth: number,
   containerHeight: number
 ): { lat: number; lng: number } => {
+  // The SVG is stretched to fill the container (width: 100%, height: 100%)
+  // First convert screen coords to SVG internal coords
+  const svgX = (screenX / containerWidth) * SVG_WIDTH;
+  const svgY = (screenY / containerHeight) * SVG_HEIGHT;
+
   // For d3 geoEquirectangular projection:
-  // scale = pixels per radian at equator
-  // So pixels per degree = scale * (π/180)
+  // scale = pixels per radian, so pixels per degree = scale * (π/180)
   const pixelsPerDegree = MAP_SCALE * (Math.PI / 180);
 
-  // Center of container in pixels
-  const centerX = containerWidth / 2;
-  const centerY = containerHeight / 2;
+  // SVG center corresponds to map center [0, 20]
+  const svgCenterX = SVG_WIDTH / 2;
+  const svgCenterY = SVG_HEIGHT / 2;
 
-  // Offset from center in pixels
-  const offsetX = screenX - centerX;
-  const offsetY = screenY - centerY;
-
-  // Convert to degrees from map center
-  const lng = MAP_CENTER_LNG + (offsetX / pixelsPerDegree);
-  const lat = MAP_CENTER_LAT - (offsetY / pixelsPerDegree); // Y inverted
+  // Convert SVG coords to lat/lng
+  const lng = MAP_CENTER_LNG + (svgX - svgCenterX) / pixelsPerDegree;
+  const lat = MAP_CENTER_LAT - (svgY - svgCenterY) / pixelsPerDegree;
 
   return { lat, lng };
 };
