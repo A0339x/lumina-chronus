@@ -682,13 +682,15 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         }
       }
 
-      // Active fireworks (current timezone hitting midnight)
-      activeFireworks.forEach(fw => {
-        if (Math.random() > 0.5) {
-          const { x, y } = latLngToCanvas(fw.lat, fw.lng);
-          addSparkleOnLand(x, y, fw.lat, fw.lng, true, 1);
-        }
-      });
+      // Active fireworks (current timezone hitting midnight) - skip when all celebrated
+      if (!allCelebrated) {
+        activeFireworks.forEach(fw => {
+          if (Math.random() > 0.5) {
+            const { x, y } = latLngToCanvas(fw.lat, fw.lng);
+            addSparkleOnLand(x, y, fw.lat, fw.lng, true, 1);
+          }
+        });
+      }
 
       // Update and draw particles
       for (let i = particles.length - 1; i >= 0; i--) {

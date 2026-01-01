@@ -177,7 +177,7 @@ const App: React.FC = () => {
     <TemperatureProvider>
       <main className="relative h-screen w-screen flex flex-col font-sans overflow-hidden selection:bg-indigo-500/30">
         <Background />
-        <Fireworks trigger={showConfetti} />
+        <Fireworks trigger={showConfetti} brief={allCelebrated || haveAllTimezonesCelebrated()} />
 
         {/* Info button - subtle, in corner */}
         <button
