@@ -44,7 +44,7 @@ const allSteps: OnboardingStep[] = [
     icon: <Heart size={48} strokeWidth={1} />,
     title: "One World, One Moment",
     subtitle: "We Celebrate Together",
-    description: "When all timezones have celebrated, a special message reminds us that despite our differences, we share this planet together."
+    description: "When all timezones have celebrated, a special message appears. Even as the world tries to divide us, moments like this remind us we are one."
   }
 ];
 

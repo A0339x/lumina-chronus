@@ -74,8 +74,8 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
           className="text-lg sm:text-xl text-white/70 font-light leading-relaxed mb-8"
         >
           From the Line Islands to American Samoa, every corner of our planet
-          has welcomed the new year. Though separated by oceans and borders,
-          we shared the same sky, the same hope, the same moment.
+          has welcomed the new year. We shared the same sky, the same hope,
+          the same moment.
         </motion.p>
 
         <motion.p
@@ -84,9 +84,9 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
           transition={{ delay: 1.8, duration: 1 }}
           className="text-xl sm:text-2xl text-white/90 font-light italic mb-10"
         >
-          "We are not divided. We are one humanity,
+          "Even as the world tries to divide us,
           <br className="hidden sm:block" />
-          sharing one home among the stars."
+          we are one."
         </motion.p>
 
         {/* Heart icon with pulse */}
