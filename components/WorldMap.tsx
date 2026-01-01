@@ -6,6 +6,7 @@ import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, TRACKED_FLIGHTS } from '../services/flightService';
 import { LightningStrike, subscribeLightning, connectLightning, disconnectLightning } from '../services/lightningService';
+import { ISSPosition, fetchISSPosition, formatVelocity, formatAltitude } from '../services/issService';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
@@ -257,6 +258,11 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const [isFlightTooltipVisible, setIsFlightTooltipVisible] = useState(false);
   const [liveFlights, setLiveFlights] = useState<Map<string, FlightInfo>>(new Map());
   const [lightningStrikes, setLightningStrikes] = useState<LightningStrike[]>([]);
+  const [issPosition, setIssPosition] = useState<ISSPosition | null>(null);
+  const [issHoverInfo, setIssHoverInfo] = useState<{ x: number; y: number } | null>(null);
+  const [isIssTooltipVisible, setIsIssTooltipVisible] = useState(false);
+  const issPositionRef = useRef<ISSPosition | null>(null);
+  const issCanvasPosRef = useRef<{ x: number; y: number } | null>(null);
   const flightProgressRef = useRef(0);
   const planePositionRef = useRef<{ x: number; y: number; bearing: number } | null>(null);
   const liveFlightsRef = useRef<Map<string, FlightInfo>>(new Map());
@@ -343,6 +349,26 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     const localX = event.clientX - rect.left;
     const localY = event.clientY - rect.top;
 
+    // Check if hovering over the ISS
+    if (issCanvasPosRef.current) {
+      const issPos = issCanvasPosRef.current;
+      const dx = localX - issPos.x;
+      const dy = localY - issPos.y;
+      const distToISS = Math.sqrt(dx * dx + dy * dy);
+
+      if (distToISS < 20) {
+        // Hovering over ISS
+        setIsIssTooltipVisible(true);
+        setIssHoverInfo({ x: event.clientX, y: event.clientY });
+        setIsTooltipVisible(false);
+        setIsFlightTooltipVisible(false);
+        return;
+      } else {
+        setIsIssTooltipVisible(false);
+        setIssHoverInfo(null);
+      }
+    }
+
     // Check if hovering over the plane
     if (planePositionRef.current) {
       const planePos = planePositionRef.current;
@@ -363,6 +389,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         });
         // Hide country tooltip
         setIsTooltipVisible(false);
+        setIsIssTooltipVisible(false);
         return;
       } else {
         // Not hovering over plane
@@ -444,6 +471,20 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       unsubscribe();
       disconnectLightning();
     };
+  }, []);
+
+  // Fetch ISS position
+  useEffect(() => {
+    const loadISS = async () => {
+      const position = await fetchISSPosition();
+      setIssPosition(position);
+      issPositionRef.current = position;
+    };
+    loadISS();
+
+    // Update every 5 seconds - ISS moves fast!
+    const interval = setInterval(loadISS, 5000);
+    return () => clearInterval(interval);
   }, []);
 
   // Update flight tooltip when live data changes (so numbers update while hovering)
@@ -954,6 +995,57 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         }
       }
 
+      // Draw ISS (International Space Station)
+      const iss = issPositionRef.current;
+      if (iss) {
+        const issPos = latLngToCanvas(iss.lat, iss.lng);
+        issCanvasPosRef.current = issPos;
+
+        ctx.save();
+        ctx.translate(issPos.x, issPos.y);
+
+        // Orbital trail effect - fading dots behind the ISS
+        const trailLength = 8;
+        for (let i = trailLength; i > 0; i--) {
+          const trailAlpha = (1 - i / trailLength) * 0.3;
+          const trailOffset = i * 3;
+          ctx.beginPath();
+          ctx.arc(-trailOffset, 0, 1.5, 0, Math.PI * 2);
+          ctx.fillStyle = `rgba(200, 220, 255, ${trailAlpha})`;
+          ctx.fill();
+        }
+
+        // Outer glow ring (pulsing)
+        const pulsePhase = (Date.now() % 2000) / 2000;
+        const pulseSize = 12 + Math.sin(pulsePhase * Math.PI * 2) * 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, pulseSize, 0, Math.PI * 2);
+        ctx.strokeStyle = 'rgba(200, 220, 255, 0.3)';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // ISS body - simplified station shape
+        ctx.shadowBlur = 10;
+        ctx.shadowColor = 'rgba(200, 220, 255, 0.8)';
+
+        // Solar panels (horizontal bars)
+        ctx.fillStyle = 'rgba(100, 140, 200, 0.9)';
+        ctx.fillRect(-10, -1.5, 20, 3);
+
+        // Main module (center)
+        ctx.fillStyle = 'rgba(220, 230, 255, 0.95)';
+        ctx.fillRect(-3, -2.5, 6, 5);
+
+        // Bright center dot
+        ctx.beginPath();
+        ctx.arc(0, 0, 2, 0, Math.PI * 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+
       // Draw flight path AC999: Montreal to Puerto Vallarta (LIVE DATA)
       const liveAC999 = liveFlightsRef.current.get('ACA999');
       const flight = liveAC999 || FALLBACK_FLIGHT;
@@ -1376,6 +1468,69 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 <span className="text-[10px] text-pink-300/60 uppercase tracking-wider">Flight Attendant</span>
               </div>
               <p className="text-pink-300 font-medium text-sm mt-0.5">{flightHoverInfo.flight.flightAttendant}</p>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ISS Tooltip */}
+      <div
+        className={`fixed z-50 pointer-events-none transition-opacity duration-200 ease-out ${
+          isIssTooltipVisible ? 'opacity-100' : 'opacity-0'
+        }`}
+        style={{
+          left: (issHoverInfo?.x ?? 0) + 16,
+          top: (issHoverInfo?.y ?? 0) + 16,
+        }}
+      >
+        {issPosition && (
+          <div className="bg-slate-900/95 backdrop-blur-md border border-indigo-400/30 rounded-xl px-4 py-3 shadow-2xl min-w-[220px]">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-3 h-3 rounded-full bg-indigo-400/50 flex items-center justify-center">
+                  <div className="w-1.5 h-1.5 rounded-full bg-indigo-300 animate-pulse"></div>
+                </div>
+                <span className="text-white font-medium">ISS</span>
+              </div>
+              <span className="text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full">
+                Live
+              </span>
+            </div>
+
+            {/* Station name */}
+            <p className="text-white/60 text-xs mb-3">International Space Station</p>
+
+            {/* Stats grid */}
+            <div className="grid grid-cols-2 gap-3 text-center border-t border-indigo-400/20 pt-3">
+              <div>
+                <p className="text-[10px] text-indigo-300/60 uppercase">Altitude</p>
+                <p className="text-indigo-200 text-sm font-medium">{formatAltitude(issPosition.altitude)}</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-indigo-300/60 uppercase">Velocity</p>
+                <p className="text-indigo-200 text-sm font-medium">{formatVelocity(issPosition.velocity)}</p>
+              </div>
+            </div>
+
+            {/* Position */}
+            <div className="grid grid-cols-2 gap-3 text-center border-t border-indigo-400/20 pt-3 mt-3">
+              <div>
+                <p className="text-[10px] text-white/40 uppercase">Latitude</p>
+                <p className="text-white/70 text-xs">{issPosition.lat.toFixed(2)}°</p>
+              </div>
+              <div>
+                <p className="text-[10px] text-white/40 uppercase">Longitude</p>
+                <p className="text-white/70 text-xs">{issPosition.lng.toFixed(2)}°</p>
+              </div>
+            </div>
+
+            {/* Visibility status */}
+            <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-center gap-2">
+              <div className={`w-2 h-2 rounded-full ${issPosition.visibility === 'daylight' ? 'bg-yellow-400' : 'bg-slate-500'}`}></div>
+              <span className="text-[10px] text-white/50 uppercase tracking-wider">
+                {issPosition.visibility === 'daylight' ? 'In Sunlight' : 'In Earth\'s Shadow'}
+              </span>
             </div>
           </div>
         )}
