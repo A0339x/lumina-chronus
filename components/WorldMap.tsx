@@ -583,14 +583,21 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
       // When all timezones have celebrated, sparkle the entire globe
       if (allCelebrated) {
-        // Generate sparkles across all longitudes
+        // Generate sparkles across all longitudes - don't require land mask
         for (let i = 0; i < 3; i++) {
           if (Math.random() > 0.7) {
             const sparkLng = Math.random() * 360 - 180; // Full longitude range
             const sparkLat = Math.random() * 130 - 60;
             const x = (sparkLng + 180) * (canvas.width / 360);
             const y = ((-1 * sparkLat) + 90) * (canvas.height / 180);
-            addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
+            // Try land check, but if mask isn't ready, show anyway
+            if (landMask) {
+              addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
+            } else {
+              // No land mask yet - just add sparkle
+              const sparkleColor = getTemperatureColor(sparkLat, sparkLng);
+              particles.push(new Particle(x, y, sparkleColor, false, 0));
+            }
           }
         }
       } else {
