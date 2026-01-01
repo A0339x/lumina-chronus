@@ -69,6 +69,79 @@ export interface FlightInfo {
   alertSeverity: AlertSeverity; // Highest severity alert
 }
 
+// Airline lookup from ICAO callsign prefixes
+const AIRLINE_PREFIXES: Record<string, { name: string; country: string }> = {
+  'ACA': { name: 'Air Canada', country: 'Canada' },
+  'AAL': { name: 'American Airlines', country: 'USA' },
+  'UAL': { name: 'United Airlines', country: 'USA' },
+  'DAL': { name: 'Delta Air Lines', country: 'USA' },
+  'SWA': { name: 'Southwest Airlines', country: 'USA' },
+  'JBU': { name: 'JetBlue Airways', country: 'USA' },
+  'ASA': { name: 'Alaska Airlines', country: 'USA' },
+  'NKS': { name: 'Spirit Airlines', country: 'USA' },
+  'FFT': { name: 'Frontier Airlines', country: 'USA' },
+  'WJA': { name: 'WestJet', country: 'Canada' },
+  'BAW': { name: 'British Airways', country: 'UK' },
+  'DLH': { name: 'Lufthansa', country: 'Germany' },
+  'AFR': { name: 'Air France', country: 'France' },
+  'KLM': { name: 'KLM Royal Dutch', country: 'Netherlands' },
+  'UAE': { name: 'Emirates', country: 'UAE' },
+  'QTR': { name: 'Qatar Airways', country: 'Qatar' },
+  'ETD': { name: 'Etihad Airways', country: 'UAE' },
+  'SIA': { name: 'Singapore Airlines', country: 'Singapore' },
+  'CPA': { name: 'Cathay Pacific', country: 'Hong Kong' },
+  'QFA': { name: 'Qantas', country: 'Australia' },
+  'ANZ': { name: 'Air New Zealand', country: 'New Zealand' },
+  'ANA': { name: 'All Nippon Airways', country: 'Japan' },
+  'JAL': { name: 'Japan Airlines', country: 'Japan' },
+  'KAL': { name: 'Korean Air', country: 'South Korea' },
+  'CCA': { name: 'Air China', country: 'China' },
+  'CES': { name: 'China Eastern', country: 'China' },
+  'CSN': { name: 'China Southern', country: 'China' },
+  'THY': { name: 'Turkish Airlines', country: 'Turkey' },
+  'RYR': { name: 'Ryanair', country: 'Ireland' },
+  'EZY': { name: 'easyJet', country: 'UK' },
+  'VIR': { name: 'Virgin Atlantic', country: 'UK' },
+  'AZA': { name: 'ITA Airways', country: 'Italy' },
+  'IBE': { name: 'Iberia', country: 'Spain' },
+  'TAP': { name: 'TAP Air Portugal', country: 'Portugal' },
+  'SAS': { name: 'Scandinavian Airlines', country: 'Sweden' },
+  'FIN': { name: 'Finnair', country: 'Finland' },
+  'AUA': { name: 'Austrian Airlines', country: 'Austria' },
+  'SWR': { name: 'Swiss International', country: 'Switzerland' },
+  'EJA': { name: 'NetJets', country: 'USA' },
+  'EJM': { name: 'ExcelAire', country: 'USA' },
+  'XOJ': { name: 'XOJET', country: 'USA' },
+  'LXJ': { name: 'Flexjet', country: 'USA' },
+  'TVS': { name: 'Travel Service', country: 'Czech Republic' },
+  'VOI': { name: 'Volaris', country: 'Mexico' },
+  'VIV': { name: 'Viva Aerobus', country: 'Mexico' },
+  'AMX': { name: 'Aeromexico', country: 'Mexico' },
+  'AVA': { name: 'Avianca', country: 'Colombia' },
+  'LAN': { name: 'LATAM Airlines', country: 'Chile' },
+  'GLO': { name: 'Gol Transportes', country: 'Brazil' },
+  'TAM': { name: 'LATAM Brasil', country: 'Brazil' },
+  'SKW': { name: 'SkyWest Airlines', country: 'USA' },
+  'RPA': { name: 'Republic Airways', country: 'USA' },
+  'ENY': { name: 'Envoy Air', country: 'USA' },
+  'PDT': { name: 'Piedmont Airlines', country: 'USA' },
+  'CPZ': { name: 'Compass Airlines', country: 'USA' },
+  'EDV': { name: 'Endeavor Air', country: 'USA' },
+  'GJS': { name: 'GoJet Airlines', country: 'USA' },
+  'ASH': { name: 'Mesa Airlines', country: 'USA' },
+  'FDX': { name: 'FedEx Express', country: 'USA' },
+  'UPS': { name: 'UPS Airlines', country: 'USA' },
+  'GTI': { name: 'Atlas Air', country: 'USA' },
+  'ABX': { name: 'ABX Air', country: 'USA' },
+};
+
+// Get airline info from callsign
+export function getAirlineFromCallsign(callsign: string): { name: string; country: string } | null {
+  // Extract prefix (usually 3 letters)
+  const prefix = callsign.replace(/[0-9]/g, '').toUpperCase();
+  return AIRLINE_PREFIXES[prefix] || null;
+}
+
 // ADS-B data sources in order of preference
 interface ADSBSource {
   name: string;
@@ -359,18 +432,31 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
         alertSeverity,
       });
     } else {
+      // Look up airline from callsign prefix
+      const airlineInfo = getAirlineFromCallsign(callsign);
+      const flightNumber = callsign.replace(/^([A-Z]{2,3})/, (match) => {
+        // Convert ICAO to IATA-style (ACA123 -> AC123)
+        const iataMap: Record<string, string> = {
+          'ACA': 'AC', 'AAL': 'AA', 'UAL': 'UA', 'DAL': 'DL', 'SWA': 'WN',
+          'JBU': 'B6', 'ASA': 'AS', 'WJA': 'WS', 'BAW': 'BA', 'DLH': 'LH',
+          'AFR': 'AF', 'KLM': 'KL', 'UAE': 'EK', 'QTR': 'QR', 'SIA': 'SQ',
+          'EJA': 'EJA', 'FDX': 'FX', 'UPS': '5X'
+        };
+        return iataMap[match] || match;
+      });
+
       newCache.set(callsign, {
-        flightNumber: callsign.replace('ACA', 'AC'),
+        flightNumber,
         callsign,
-        airline: callsign.startsWith('ACA') ? 'Air Canada' : 'Unknown',
-        aircraft: 'Unknown',
-        origin: { icao: 'Unknown', name: 'Unknown', lat: 0, lng: 0 },
-        destination: { icao: 'Unknown', name: 'Unknown', lat: 0, lng: 0 },
-        departureTime: '--:--',
-        arrivalTime: '--:--',
-        duration: '--',
-        distance: '--',
-        flightAttendant: 'The Best Flight Attendant',
+        airline: airlineInfo?.name || 'Private/Unknown',
+        aircraft: '',
+        origin: { icao: '', name: '', lat: 0, lng: 0 },
+        destination: { icao: '', name: '', lat: 0, lng: 0 },
+        departureTime: '',
+        arrivalTime: '',
+        duration: '',
+        distance: '',
+        flightAttendant: '',
         status,
         position,
         alerts,

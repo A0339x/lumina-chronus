@@ -1415,57 +1415,63 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
               </div>
             )}
 
-            {/* Route */}
-            <div className="flex items-center gap-2 mb-3">
-              <div className="text-center">
-                <p className="text-white font-medium text-sm">{flightHoverInfo.flight.origin.icao}</p>
-                <p className="text-white/50 text-[10px]">{flightHoverInfo.flight.origin.name}</p>
-              </div>
-              <div className="flex-1 flex items-center gap-1 px-2">
-                <div className="h-px flex-1 bg-amber-400/30"></div>
-                <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
-                </svg>
-                <div className="h-px flex-1 bg-amber-400/30"></div>
-              </div>
-              <div className="text-center">
-                <p className="text-white font-medium text-sm">{flightHoverInfo.flight.destination.icao}</p>
-                <p className="text-white/50 text-[10px]">{flightHoverInfo.flight.destination.name}</p>
-              </div>
-            </div>
+            {/* Route - only show if we have route info */}
+            {flightHoverInfo.flight.origin.icao && flightHoverInfo.flight.destination.icao && (
+              <>
+                <div className="flex items-center gap-2 mb-3">
+                  <div className="text-center">
+                    <p className="text-white font-medium text-sm">{flightHoverInfo.flight.origin.icao}</p>
+                    <p className="text-white/50 text-[10px]">{flightHoverInfo.flight.origin.name}</p>
+                  </div>
+                  <div className="flex-1 flex items-center gap-1 px-2">
+                    <div className="h-px flex-1 bg-amber-400/30"></div>
+                    <svg className="w-4 h-4 text-amber-400" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M21 16v-2l-8-5V3.5c0-.83-.67-1.5-1.5-1.5S10 2.67 10 3.5V9l-8 5v2l8-2.5V19l-2 1.5V22l3.5-1 3.5 1v-1.5L13 19v-5.5l8 2.5z"/>
+                    </svg>
+                    <div className="h-px flex-1 bg-amber-400/30"></div>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-white font-medium text-sm">{flightHoverInfo.flight.destination.icao}</p>
+                    <p className="text-white/50 text-[10px]">{flightHoverInfo.flight.destination.name}</p>
+                  </div>
+                </div>
 
-            {/* Progress bar */}
-            <div className="mb-3">
-              <div className="flex justify-between text-[10px] text-white/50 mb-1">
-                <span>{flightHoverInfo.flight.departureTime}</span>
-                <span>{Math.round(flightHoverInfo.progress * 100)}% Complete</span>
-                <span>{flightHoverInfo.flight.arrivalTime}</span>
-              </div>
-              <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all"
-                  style={{ width: `${flightHoverInfo.progress * 100}%` }}
-                />
-              </div>
-            </div>
+                {/* Progress bar - only with route */}
+                <div className="mb-3">
+                  <div className="flex justify-between text-[10px] text-white/50 mb-1">
+                    <span>{flightHoverInfo.flight.departureTime}</span>
+                    <span>{Math.round(flightHoverInfo.progress * 100)}% Complete</span>
+                    <span>{flightHoverInfo.flight.arrivalTime}</span>
+                  </div>
+                  <div className="h-1.5 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-amber-400 to-amber-500 rounded-full transition-all"
+                      style={{ width: `${flightHoverInfo.progress * 100}%` }}
+                    />
+                  </div>
+                </div>
 
-            {/* Flight details */}
-            <div className="grid grid-cols-3 gap-2 text-center border-t border-white/10 pt-2 mb-3">
-              <div>
-                <p className="text-[10px] text-white/40 uppercase">Aircraft</p>
-                <p className="text-white/80 text-xs">{flightHoverInfo.flight.aircraft}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/40 uppercase">Duration</p>
-                <p className="text-white/80 text-xs">{flightHoverInfo.flight.duration}</p>
-              </div>
-              <div>
-                <p className="text-[10px] text-white/40 uppercase">Distance</p>
-                <p className="text-white/80 text-xs">{flightHoverInfo.flight.distance}</p>
-              </div>
-            </div>
+                {/* Flight details - only with route */}
+                {(flightHoverInfo.flight.aircraft || flightHoverInfo.flight.duration || flightHoverInfo.flight.distance) && (
+                  <div className="grid grid-cols-3 gap-2 text-center border-t border-white/10 pt-2 mb-3">
+                    <div>
+                      <p className="text-[10px] text-white/40 uppercase">Aircraft</p>
+                      <p className="text-white/80 text-xs">{flightHoverInfo.flight.aircraft || '--'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/40 uppercase">Duration</p>
+                      <p className="text-white/80 text-xs">{flightHoverInfo.flight.duration || '--'}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] text-white/40 uppercase">Distance</p>
+                      <p className="text-white/80 text-xs">{flightHoverInfo.flight.distance || '--'}</p>
+                    </div>
+                  </div>
+                )}
+              </>
+            )}
 
-            {/* Live flight data (altitude, speed, distance flown) */}
+            {/* Live flight data (altitude, speed, heading/distance) */}
             {flightHoverInfo.flight.position && (
               <>
                 <div className="grid grid-cols-3 gap-2 text-center border-t border-cyan-400/20 pt-2 mb-3">
@@ -1482,10 +1488,21 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                     </p>
                   </div>
                   <div>
-                    <p className="text-[10px] text-cyan-400/60 uppercase">Flown</p>
-                    <p className="text-cyan-300 text-xs font-medium">
-                      {Math.round(calculateDistanceFlown(flightHoverInfo.flight)).toLocaleString()} km
-                    </p>
+                    {flightHoverInfo.flight.origin.lat !== 0 ? (
+                      <>
+                        <p className="text-[10px] text-cyan-400/60 uppercase">Flown</p>
+                        <p className="text-cyan-300 text-xs font-medium">
+                          {Math.round(calculateDistanceFlown(flightHoverInfo.flight)).toLocaleString()} km
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-[10px] text-cyan-400/60 uppercase">Heading</p>
+                        <p className="text-cyan-300 text-xs font-medium">
+                          {Math.round(flightHoverInfo.flight.position.heading)}°
+                        </p>
+                      </>
+                    )}
                   </div>
                 </div>
 
@@ -1548,13 +1565,15 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
               </>
             )}
 
-            {/* Flight Attendant */}
-            <div className="border-t border-white/10 pt-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[10px] text-pink-300/60 uppercase tracking-wider">Flight Attendant</span>
+            {/* Flight Attendant - only show if set */}
+            {flightHoverInfo.flight.flightAttendant && (
+              <div className="border-t border-white/10 pt-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-pink-300/60 uppercase tracking-wider">Flight Attendant</span>
+                </div>
+                <p className="text-pink-300 font-medium text-sm mt-0.5">{flightHoverInfo.flight.flightAttendant}</p>
               </div>
-              <p className="text-pink-300 font-medium text-sm mt-0.5">{flightHoverInfo.flight.flightAttendant}</p>
-            </div>
+            )}
           </div>
         )}
       </div>
