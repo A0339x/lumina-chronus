@@ -156,7 +156,13 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
             knownInfo.destination.lat, knownInfo.destination.lng
           );
 
-          if (distToDestination < 50 || cached.position.onGround) {
+          // Only mark as landed if:
+          // 1. Close to destination AND at low altitude (< 3000m / ~10,000ft), OR
+          // 2. Was already marked as on ground
+          const isLowAltitude = cached.position.altitude < 3000;
+          const isNearDestination = distToDestination < 50;
+
+          if ((isNearDestination && isLowAltitude) || cached.position.onGround) {
             // Likely landed - show at destination
             newCache.set(callsign, {
               ...knownInfo,
@@ -171,8 +177,13 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
               },
             });
           } else {
-            // Still in transit or unknown - keep last known position
-            newCache.set(callsign, cached);
+            // Still in transit (possibly lost signal at cruise altitude)
+            // Keep last known position but don't change status
+            newCache.set(callsign, {
+              ...cached,
+              // If at cruise altitude (> 8000m / ~26,000ft), still mark as In Flight
+              status: cached.position.altitude > 8000 ? 'In Flight' : cached.status,
+            });
           }
         } else if (knownInfo) {
           // No previous position, show as scheduled (not yet departed)
