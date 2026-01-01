@@ -1362,8 +1362,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           isFlightTooltipVisible ? 'opacity-100' : 'opacity-0'
         }`}
         style={{
-          left: (flightHoverInfo?.x ?? 0) + 20,
-          top: (flightHoverInfo?.y ?? 0) + 20,
+          left: Math.min((flightHoverInfo?.x ?? 0) + 20, window.innerWidth - 320),
+          top: (flightHoverInfo?.y ?? 0) > window.innerHeight - 500
+            ? (flightHoverInfo?.y ?? 0) - 480
+            : (flightHoverInfo?.y ?? 0) + 20,
         }}
       >
         {flightHoverInfo && (

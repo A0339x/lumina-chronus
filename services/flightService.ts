@@ -326,10 +326,34 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
     const alerts = checkSquawkAlerts(position.squawk);
     const alertSeverity = getHighestSeverity(alerts);
 
+    // Determine flight status
+    let status: 'In Flight' | 'Landed' | 'Scheduled' = position.onGround ? 'Landed' : 'In Flight';
+
+    // If we have known flight info, check if we're near destination with stale data
+    if (knownInfo && !position.onGround) {
+      const distToDestination = haversineDistance(
+        position.latitude, position.longitude,
+        knownInfo.destination.lat, knownInfo.destination.lng
+      );
+      const isNearDestination = distToDestination < 100; // Within 100km
+      const isLowAltitude = position.altitude < 3000; // Below 10,000ft
+      const dataAge = (Date.now() / 1000) - position.lastUpdate;
+      const isStaleData = dataAge > 600; // Data older than 10 minutes
+
+      // If near destination, low altitude, and data is stale - probably landed
+      if (isNearDestination && isLowAltitude && isStaleData) {
+        status = 'Landed';
+      }
+      // If very close to destination (within 30km) and low, probably landed
+      if (distToDestination < 30 && isLowAltitude) {
+        status = 'Landed';
+      }
+    }
+
     if (knownInfo) {
       newCache.set(callsign, {
         ...knownInfo,
-        status: position.onGround ? 'Landed' : 'In Flight',
+        status,
         position,
         alerts,
         alertSeverity,
@@ -347,7 +371,7 @@ export async function fetchFlightData(callsigns: string[]): Promise<Map<string, 
         duration: '--',
         distance: '--',
         flightAttendant: 'The Best Flight Attendant',
-        status: position.onGround ? 'Landed' : 'In Flight',
+        status,
         position,
         alerts,
         alertSeverity,
