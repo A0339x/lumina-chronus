@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, memo, useState, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 import { FireworkEvent, TimezoneData } from '../types';
-import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportCondition, WeatherCondition } from '../services/metarService';
+import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportCondition, WeatherCondition, WeatherIntensity } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 
@@ -108,12 +108,14 @@ const getWeatherConditionColor = (condition: WeatherCondition): string => {
   }
 };
 
-// Get display name for weather condition
-const getWeatherConditionLabel = (condition: WeatherCondition): string => {
+// Get display name for weather condition with intensity
+const getWeatherConditionLabel = (condition: WeatherCondition, intensity: WeatherIntensity): string => {
+  const intensityPrefix = intensity ? `${intensity.charAt(0).toUpperCase() + intensity.slice(1)} ` : '';
+
   switch (condition) {
-    case 'thunderstorm': return 'Thunderstorm';
-    case 'snow': return 'Snow';
-    case 'rain': return 'Heavy Rain';
+    case 'thunderstorm': return intensity ? `${intensityPrefix}Thunderstorm` : 'Thunderstorm';
+    case 'snow': return intensity ? `${intensityPrefix}Snow` : 'Snow';
+    case 'rain': return intensity ? `${intensityPrefix}Rain` : 'Heavy Rain';
     case 'fog': return 'Fog';
     case 'freezing': return 'Freezing Conditions';
     default: return '';
@@ -916,7 +918,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                           style={{ backgroundColor: getWeatherConditionColor(hoverInfo.airportInfo.condition) }}
                         />
                         <span className="text-xs font-medium" style={{ color: getWeatherConditionColor(hoverInfo.airportInfo.condition) }}>
-                          {getWeatherConditionLabel(hoverInfo.airportInfo.condition)}
+                          {getWeatherConditionLabel(hoverInfo.airportInfo.condition, hoverInfo.airportInfo.intensity)}
                         </span>
                       </div>
                     )}
@@ -946,7 +948,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                       style={{ backgroundColor: getWeatherConditionColor(hoverInfo.airportInfo.condition) }}
                     />
                     <span className="text-xs font-medium" style={{ color: getWeatherConditionColor(hoverInfo.airportInfo.condition) }}>
-                      {getWeatherConditionLabel(hoverInfo.airportInfo.condition)}
+                      {getWeatherConditionLabel(hoverInfo.airportInfo.condition, hoverInfo.airportInfo.intensity)}
                     </span>
                   </div>
                 )}

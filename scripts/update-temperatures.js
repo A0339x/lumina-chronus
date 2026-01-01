@@ -1,5 +1,5 @@
 // Script to fetch live temperatures and weather conditions
-// Run by GitHub Actions every 3 hours
+// Run by GitHub Actions every hour
 // Fetches data for ~500 major international airports
 
 import fs from 'fs';
@@ -25,6 +25,30 @@ const weatherCodeToCondition = (code) => {
   if (code >= 80 && code <= 82) return code >= 82 ? 'rain' : null; // Rain showers (only violent)
   if (code >= 85 && code <= 86) return 'snow'; // Snow showers
   if (code >= 95 && code <= 99) return 'thunderstorm'; // Thunderstorm
+  return null;
+};
+
+// Get intensity description based on precipitation amounts
+const getIntensity = (condition, snowfall, rain) => {
+  if (!condition) return null;
+
+  if (condition === 'snow') {
+    // snowfall is in cm
+    if (snowfall >= 5) return 'heavy';
+    if (snowfall >= 1) return 'moderate';
+    if (snowfall > 0) return 'light';
+    return null;
+  }
+
+  if (condition === 'rain' || condition === 'thunderstorm') {
+    // rain is in mm
+    if (rain >= 10) return 'heavy';
+    if (rain >= 2.5) return 'moderate';
+    if (rain > 0) return 'light';
+    return null;
+  }
+
+  // fog and freezing don't have intensity
   return null;
 };
 
@@ -60,7 +84,7 @@ async function fetchWeatherData() {
 
     try {
       const response = await fetch(
-        `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current_weather=true`
+        `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current=temperature_2m,weather_code,snowfall,rain`
       );
 
       if (!response.ok) {
@@ -72,16 +96,22 @@ async function fetchWeatherData() {
 
       if (Array.isArray(data)) {
         data.forEach((item, idx) => {
-          if (item.current_weather) {
-            const temp = Math.round(item.current_weather.temperature);
-            const condition = weatherCodeToCondition(item.current_weather.weathercode);
-            weatherData[batch[idx].icao] = { temp, condition };
+          if (item.current) {
+            const temp = Math.round(item.current.temperature_2m);
+            const condition = weatherCodeToCondition(item.current.weather_code);
+            const snowfall = item.current.snowfall || 0;
+            const rain = item.current.rain || 0;
+            const intensity = getIntensity(condition, snowfall, rain);
+            weatherData[batch[idx].icao] = { temp, condition, intensity };
           }
         });
-      } else if (data.current_weather) {
-        const temp = Math.round(data.current_weather.temperature);
-        const condition = weatherCodeToCondition(data.current_weather.weathercode);
-        weatherData[batch[0].icao] = { temp, condition };
+      } else if (data.current) {
+        const temp = Math.round(data.current.temperature_2m);
+        const condition = weatherCodeToCondition(data.current.weather_code);
+        const snowfall = data.current.snowfall || 0;
+        const rain = data.current.rain || 0;
+        const intensity = getIntensity(condition, snowfall, rain);
+        weatherData[batch[0].icao] = { temp, condition, intensity };
       }
 
       if ((i / batchSize) % 20 === 0) {
@@ -129,7 +159,8 @@ async function updateMetarService(weatherData) {
     `// Last updated: ${new Date().toISOString()}`,
     `// Coverage: ${Object.keys(weatherData).length} airports, ${withConditions} with active weather`,
     'type WeatherCondition = "thunderstorm" | "snow" | "rain" | "fog" | "freezing" | null;',
-    'interface AirportWeather { temp: number; condition: WeatherCondition; }',
+    'type WeatherIntensity = "light" | "moderate" | "heavy" | null;',
+    'interface AirportWeather { temp: number; condition: WeatherCondition; intensity: WeatherIntensity; }',
     'const HARDCODED_WEATHER: Record<string, AirportWeather> = {',
   ];
 
@@ -138,10 +169,9 @@ async function updateMetarService(weatherData) {
   for (let i = 0; i < entries.length; i += 10) {
     const chunk = entries.slice(i, i + 10);
     const formatted = chunk.map(([k, v]) => {
-      if (v.condition) {
-        return `"${k}":{temp:${v.temp},condition:"${v.condition}"}`;
-      }
-      return `"${k}":{temp:${v.temp},condition:null}`;
+      const cond = v.condition ? `"${v.condition}"` : 'null';
+      const intens = v.intensity ? `"${v.intensity}"` : 'null';
+      return `"${k}":{temp:${v.temp},condition:${cond},intensity:${intens}}`;
     }).join(',');
     lines.push('  ' + formatted + ',');
   }

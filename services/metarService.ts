@@ -9,11 +9,13 @@ export interface Airport {
 }
 
 export type WeatherCondition = "thunderstorm" | "snow" | "rain" | "fog" | "freezing" | null;
+export type WeatherIntensity = "light" | "moderate" | "heavy" | null;
 
 export interface NearestAirportInfo {
   airport: Airport;
   temp: number;
   condition: WeatherCondition;
+  intensity: WeatherIntensity;
   distance: number; // in degrees (approximate)
 }
 
@@ -646,6 +648,7 @@ export function getNearestAirportTemp(lat: number, lng: number): NearestAirportI
       airport: nearest,
       temp: Math.round(baseTemp + seasonalAdj * latFactor),
       condition: null,
+      intensity: null,
       distance: nearestDist
     };
   }
@@ -654,6 +657,7 @@ export function getNearestAirportTemp(lat: number, lng: number): NearestAirportI
     airport: nearest,
     temp: weather.temp,
     condition: weather.condition,
+    intensity: weather.intensity,
     distance: nearestDist
   };
 }
@@ -673,6 +677,12 @@ export function getAirportTemp(icao: string): number | null {
 export function getAirportCondition(icao: string): WeatherCondition {
   const weather = WEATHER_MAP.get(icao);
   return weather?.condition ?? null;
+}
+
+// Get weather intensity for a specific airport
+export function getAirportIntensity(icao: string): WeatherIntensity {
+  const weather = WEATHER_MAP.get(icao);
+  return weather?.intensity ?? null;
 }
 
 // Alias for backwards compatibility
