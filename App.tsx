@@ -5,6 +5,7 @@ import { CountdownState, FireworkEvent, TimezoneData } from './types';
 import Background from './components/Background';
 import CountdownDisplay from './components/CountdownDisplay';
 import MobileCountdown from './components/MobileCountdown';
+import CelebrationHeader from './components/CelebrationHeader';
 import Fireworks from './components/Fireworks';
 import WorldMap from './components/WorldMap';
 import TemperatureLegend from './components/TemperatureLegend';
@@ -228,12 +229,16 @@ const App: React.FC = () => {
             />
           </div>
 
-          {/* Countdown - Top Left */}
+          {/* Countdown or Celebration Header - Top Left */}
           <div className="absolute top-4 left-4 z-20">
-            <MobileCountdown
-              timezone={state.timezone}
-              timeRemaining={state.timeRemaining}
-            />
+            {allCelebrated ? (
+              <CelebrationHeader subtitle="Celebrated around the world" />
+            ) : (
+              <MobileCountdown
+                timezone={state.timezone}
+                timeRemaining={state.timeRemaining}
+              />
+            )}
           </div>
 
           {/* Legend - Bottom Right */}
@@ -258,12 +263,16 @@ const App: React.FC = () => {
         {/* DESKTOP LAYOUT - Original centered layout (1024px and up) */}
         <div className="hidden lg:flex relative z-10 w-full h-full overflow-hidden flex-col items-center p-2 sm:p-3">
 
-          {/* Top Section: Compact Countdown */}
+          {/* Top Section: Countdown or Celebration Header */}
           <section className="w-full max-w-4xl flex justify-center shrink-0">
-              <CountdownDisplay
-                  timezone={state.timezone}
-                  timeRemaining={state.timeRemaining}
-              />
+              {allCelebrated ? (
+                <CelebrationHeader subtitle="Celebrated around the world" />
+              ) : (
+                <CountdownDisplay
+                    timezone={state.timezone}
+                    timeRemaining={state.timeRemaining}
+                />
+              )}
           </section>
 
           {/* Middle Section: World Map - MAIN FOCUS */}
