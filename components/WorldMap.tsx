@@ -8,7 +8,7 @@ import { useTemperature } from '../contexts/TemperatureContext';
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
 // Convert temperature (Celsius) to color
-// Range: -40°C (blue) to +40°C (red)
+// Range: -40°C (violet) to +40°C (red)
 const tempToColor = (tempC: number): string => {
   // Clamp to -40 to +40 range
   tempC = Math.max(-40, Math.min(40, tempC));
@@ -16,24 +16,30 @@ const tempToColor = (tempC: number): string => {
   // Normalize to 0-1 range (-40C = 0, +40C = 1)
   const temp = (tempC + 40) / 80;
 
-  // Color gradient: Blue (cold) -> Cyan -> Green -> Yellow -> Orange -> Red (hot)
+  // Color gradient: Violet (extreme cold) -> Blue -> Cyan -> Green -> Yellow -> Orange -> Red (hot)
   let r, g, b;
 
-  if (temp < 0.2) {
-    // Very cold (-40 to -24): Blue to Cyan
-    const t = temp / 0.2;
-    r = Math.floor(100 * t);
-    g = Math.floor(150 + 105 * t);
+  if (temp < 0.15) {
+    // Extreme cold (-40 to -28): Deep violet/magenta to Blue
+    const t = temp / 0.15;
+    r = Math.floor(180 - 80 * t);  // 180 -> 100
+    g = Math.floor(50 + 100 * t);   // 50 -> 150
     b = 255;
-  } else if (temp < 0.4) {
-    // Cold (-24 to -8): Cyan to Green
-    const t = (temp - 0.2) / 0.2;
-    r = Math.floor(100 - 100 * t);
+  } else if (temp < 0.3) {
+    // Very cold (-28 to -16): Blue to Cyan
+    const t = (temp - 0.15) / 0.15;
+    r = Math.floor(100 - 100 * t);  // 100 -> 0
+    g = Math.floor(150 + 105 * t);  // 150 -> 255
+    b = 255;
+  } else if (temp < 0.45) {
+    // Cold (-16 to -4): Cyan to Green
+    const t = (temp - 0.3) / 0.15;
+    r = 0;
     g = 255;
-    b = Math.floor(255 - 155 * t);
+    b = Math.floor(255 - 155 * t);  // 255 -> 100
   } else if (temp < 0.6) {
-    // Cool (-8 to +8): Green to Yellow
-    const t = (temp - 0.4) / 0.2;
+    // Cool (-4 to +8): Green to Yellow
+    const t = (temp - 0.45) / 0.15;
     r = Math.floor(255 * t);
     g = 255;
     b = Math.floor(100 - 100 * t);

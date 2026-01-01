@@ -5,8 +5,9 @@ const MobileLegend: React.FC = () => {
   const { unit, toggleUnit, convertTemp } = useTemperature();
 
   // Simplified: just show cold to hot with colors
+  // Violet/Blue for extreme cold, Cyan for cold, Green/Yellow for mild, Orange/Red for hot
   const temps = [-20, 0, 20, 40];
-  const colors = ['#64ffff', '#00ff64', '#ffff00', '#ff3700'];
+  const colors = ['#0096ff', '#00ffff', '#ffff00', '#ff3700'];
 
   return (
     <div className="flex flex-col items-end gap-1.5">

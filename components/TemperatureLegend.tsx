@@ -7,7 +7,8 @@ const TemperatureLegend: React.FC = () => {
 
   // Temperature values in Celsius
   const temps = [-40, -20, 0, 20, 40];
-  const colors = ['#6496ff', '#64ffff', '#00ff64', '#ffff00', '#ff3700'];
+  // Violet -> Blue -> Cyan -> Green -> Yellow -> Orange -> Red
+  const colors = ['#b432ff', '#0096ff', '#00ffff', '#ffff00', '#ff3700'];
 
   return (
     <div className="flex flex-col items-center w-full max-w-xl mx-auto">
