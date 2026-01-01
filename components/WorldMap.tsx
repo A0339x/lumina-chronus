@@ -96,6 +96,7 @@ const MAP_CENTER_LAT = 20;
 // react-simple-maps default SVG dimensions
 const SVG_WIDTH = 800;
 const SVG_HEIGHT = 600;
+const SVG_ASPECT = SVG_WIDTH / SVG_HEIGHT;
 
 // Convert screen coordinates to lat/lng based on equirectangular projection
 const screenToLatLng = (
@@ -104,10 +105,26 @@ const screenToLatLng = (
   containerWidth: number,
   containerHeight: number
 ): { lat: number; lng: number } => {
-  // The SVG is stretched to fill the container (width: 100%, height: 100%)
-  // First convert screen coords to SVG internal coords
-  const svgX = (screenX / containerWidth) * SVG_WIDTH;
-  const svgY = (screenY / containerHeight) * SVG_HEIGHT;
+  // SVG preserves aspect ratio (xMidYMid meet) - calculate actual rendered size
+  const containerAspect = containerWidth / containerHeight;
+
+  let svgX, svgY;
+
+  if (containerAspect > SVG_ASPECT) {
+    // Container is wider than SVG - SVG fitted to height, centered horizontally
+    const scale = containerHeight / SVG_HEIGHT;
+    const renderedWidth = SVG_WIDTH * scale;
+    const offsetX = (containerWidth - renderedWidth) / 2;
+    svgX = ((screenX - offsetX) / renderedWidth) * SVG_WIDTH;
+    svgY = (screenY / containerHeight) * SVG_HEIGHT;
+  } else {
+    // Container is taller than SVG - SVG fitted to width, centered vertically
+    const scale = containerWidth / SVG_WIDTH;
+    const renderedHeight = SVG_HEIGHT * scale;
+    const offsetY = (containerHeight - renderedHeight) / 2;
+    svgX = (screenX / containerWidth) * SVG_WIDTH;
+    svgY = ((screenY - offsetY) / renderedHeight) * SVG_HEIGHT;
+  }
 
   // For d3 geoEquirectangular projection:
   // scale = pixels per radian, so pixels per degree = scale * (π/180)
