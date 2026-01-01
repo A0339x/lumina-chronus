@@ -563,30 +563,22 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
       update(): boolean {
         this.life++;
+        this.twinklePhase += this.twinkleSpeed;
 
-        const lifeRatio = this.life / this.maxLife;
+        // Continuous twinkle between 0.4 and 1.0 (never fully fades out)
+        const twinkle = 0.7 + 0.3 * Math.sin(this.twinklePhase);
 
-        if (lifeRatio < 0.15) {
-          // Faster fade in for celebration
-          this.alpha = (lifeRatio / 0.15) * this.maxAlpha;
-        } else if (lifeRatio > 0.7) {
-          this.alpha = ((1 - lifeRatio) / 0.3) * this.maxAlpha;
+        if (this.isCelebration) {
+          // Celebration particles pulse more dramatically
+          this.pulsePhase += 0.1;
+          const pulse = 0.85 + 0.15 * Math.sin(this.pulsePhase * 3);
+          this.alpha = this.maxAlpha * twinkle * pulse;
         } else {
-          this.twinklePhase += this.twinkleSpeed;
-          // Gentle twinkle: 0.75 to 1.0 (25% variation instead of 40%)
-          const twinkle = 0.75 + 0.25 * Math.sin(this.twinklePhase);
-
-          if (this.isCelebration) {
-            // Celebration particles pulse more dramatically
-            this.pulsePhase += 0.1;
-            const pulse = 0.85 + 0.15 * Math.sin(this.pulsePhase * 3);
-            this.alpha = this.maxAlpha * twinkle * pulse;
-          } else {
-            this.alpha = this.maxAlpha * twinkle;
-          }
+          this.alpha = this.maxAlpha * twinkle;
         }
 
-        return this.life < this.maxLife;
+        // Never die - always return true
+        return true;
       }
     }
 
