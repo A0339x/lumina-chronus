@@ -1,4 +1,4 @@
-# Cloudflare Pages configuration
+# Cloudflare Pages Functions configuration
 name = "lumina-chronos"
 compatibility_date = "2024-01-01"
 
