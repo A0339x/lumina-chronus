@@ -1,5 +1,6 @@
 // ISS (International Space Station) tracking service
 // Uses the "Where The ISS At?" API for real-time position data
+// Interpolates position between API calls for smooth animation
 
 export interface ISSPosition {
   lat: number;
@@ -10,16 +11,57 @@ export interface ISSPosition {
   timestamp: number;
 }
 
-let cachedPosition: ISSPosition | null = null;
+// Store last two positions for interpolation
+let previousPosition: ISSPosition | null = null;
+let currentPosition: ISSPosition | null = null;
 let lastFetch = 0;
-const CACHE_DURATION = 5000; // 5 seconds - ISS moves fast!
+const CACHE_DURATION = 5000; // 5 seconds between API calls
+
+// Earth's radius in km
+const EARTH_RADIUS = 6371;
+
+// Calculate the ISS's approximate heading based on two positions
+function calculateHeading(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const lat1Rad = lat1 * Math.PI / 180;
+  const lat2Rad = lat2 * Math.PI / 180;
+
+  const x = Math.sin(dLng) * Math.cos(lat2Rad);
+  const y = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
+
+  let heading = Math.atan2(x, y) * 180 / Math.PI;
+  return (heading + 360) % 360;
+}
+
+// Move a point along a great circle given heading and distance
+function moveAlongGreatCircle(lat: number, lng: number, heading: number, distanceKm: number): { lat: number; lng: number } {
+  const angularDistance = distanceKm / EARTH_RADIUS;
+  const headingRad = heading * Math.PI / 180;
+  const latRad = lat * Math.PI / 180;
+  const lngRad = lng * Math.PI / 180;
+
+  const newLatRad = Math.asin(
+    Math.sin(latRad) * Math.cos(angularDistance) +
+    Math.cos(latRad) * Math.sin(angularDistance) * Math.cos(headingRad)
+  );
+
+  const newLngRad = lngRad + Math.atan2(
+    Math.sin(headingRad) * Math.sin(angularDistance) * Math.cos(latRad),
+    Math.cos(angularDistance) - Math.sin(latRad) * Math.sin(newLatRad)
+  );
+
+  return {
+    lat: newLatRad * 180 / Math.PI,
+    lng: ((newLngRad * 180 / Math.PI) + 540) % 360 - 180 // Normalize to -180 to 180
+  };
+}
 
 export async function fetchISSPosition(): Promise<ISSPosition | null> {
   const now = Date.now();
 
   // Return cached data if fresh
-  if (cachedPosition && (now - lastFetch < CACHE_DURATION)) {
-    return cachedPosition;
+  if (currentPosition && (now - lastFetch < CACHE_DURATION)) {
+    return currentPosition;
   }
 
   try {
@@ -34,21 +76,63 @@ export async function fetchISSPosition(): Promise<ISSPosition | null> {
 
     const data = await response.json();
 
-    cachedPosition = {
+    // Store previous position for interpolation
+    previousPosition = currentPosition;
+
+    currentPosition = {
       lat: data.latitude,
       lng: data.longitude,
       altitude: Math.round(data.altitude),
       velocity: Math.round(data.velocity),
       visibility: data.visibility === 'daylight' ? 'daylight' : 'eclipsed',
-      timestamp: data.timestamp * 1000, // Convert to milliseconds
+      timestamp: data.timestamp * 1000,
     };
     lastFetch = now;
 
-    return cachedPosition;
+    return currentPosition;
   } catch (error) {
     console.error('[ISS] Fetch error:', error);
-    return cachedPosition; // Return stale data if available
+    return currentPosition;
   }
+}
+
+// Get interpolated position for smooth animation
+export function getInterpolatedISSPosition(): ISSPosition | null {
+  if (!currentPosition) return null;
+
+  const now = Date.now();
+  const timeSinceUpdate = now - lastFetch;
+
+  // If we have two positions, calculate heading and extrapolate
+  if (previousPosition && currentPosition) {
+    const heading = calculateHeading(
+      previousPosition.lat, previousPosition.lng,
+      currentPosition.lat, currentPosition.lng
+    );
+
+    // ISS velocity in km/s (velocity is in km/h)
+    const velocityKmPerSec = currentPosition.velocity / 3600;
+
+    // Distance traveled since last update
+    const distanceTraveled = velocityKmPerSec * (timeSinceUpdate / 1000);
+
+    // Calculate new position along the trajectory
+    const interpolated = moveAlongGreatCircle(
+      currentPosition.lat,
+      currentPosition.lng,
+      heading,
+      distanceTraveled
+    );
+
+    return {
+      ...currentPosition,
+      lat: interpolated.lat,
+      lng: interpolated.lng,
+    };
+  }
+
+  // Fallback: just return current position
+  return currentPosition;
 }
 
 // Format velocity for display

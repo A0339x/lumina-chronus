@@ -6,7 +6,7 @@ import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, TRACKED_FLIGHTS } from '../services/flightService';
 import { LightningStrike, subscribeLightning, connectLightning, disconnectLightning } from '../services/lightningService';
-import { ISSPosition, fetchISSPosition, formatVelocity, formatAltitude } from '../services/issService';
+import { ISSPosition, fetchISSPosition, getInterpolatedISSPosition, formatVelocity, formatAltitude } from '../services/issService';
 
 const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
 
@@ -995,10 +995,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         }
       }
 
-      // Draw ISS (International Space Station)
-      const iss = issPositionRef.current;
+      // Draw ISS (International Space Station) - use interpolated position for smooth animation
+      const iss = getInterpolatedISSPosition();
       if (iss) {
         const issPos = latLngToCanvas(iss.lat, iss.lng);
+        // Update ref for hover detection
+        issPositionRef.current = iss;
         issCanvasPosRef.current = issPos;
 
         ctx.save();
