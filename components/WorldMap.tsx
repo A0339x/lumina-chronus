@@ -239,23 +239,47 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     }, 200);
   }, []);
 
-  // Update tooltip position and airport info on mouse move within country
+  // Update tooltip position and airport info on mouse move
+  // Works both over land (with country info) and ocean (nearest airport only)
   const handleMouseMove = useCallback((event: React.MouseEvent) => {
-    if (currentCountry && mapContainerRef.current) {
-      const rect = mapContainerRef.current.getBoundingClientRect();
-      const localX = event.clientX - rect.left;
-      const localY = event.clientY - rect.top;
-      const { lat, lng } = screenToLatLng(localX, localY, rect.width, rect.height);
-      const airportInfo = getNearestAirportInfo(lat, lng);
+    if (!mapContainerRef.current) return;
 
+    const rect = mapContainerRef.current.getBoundingClientRect();
+    const localX = event.clientX - rect.left;
+    const localY = event.clientY - rect.top;
+    const { lat, lng } = screenToLatLng(localX, localY, rect.width, rect.height);
+    const airportInfo = getNearestAirportInfo(lat, lng);
+
+    if (currentCountry) {
+      // Over land - show country + airport info
       setHoverInfo({
         country: currentCountry,
         airportInfo,
         x: event.clientX,
         y: event.clientY
       });
+    } else if (airportInfo && airportInfo.distance < 8) {
+      // Over ocean but near an airport (within ~8 degrees / ~800km)
+      // Show airport info without country
+      if (fadeTimeoutRef.current) {
+        clearTimeout(fadeTimeoutRef.current);
+        fadeTimeoutRef.current = null;
+      }
+      setIsTooltipVisible(true);
+      setHoverInfo({
+        country: null,
+        airportInfo,
+        x: event.clientX,
+        y: event.clientY
+      });
+    } else if (!currentCountry && hoverInfo) {
+      // Moving over open ocean far from airports - hide tooltip
+      setIsTooltipVisible(false);
+      fadeTimeoutRef.current = setTimeout(() => {
+        setHoverInfo(null);
+      }, 200);
     }
-  }, [currentCountry]);
+  }, [currentCountry, hoverInfo]);
 
   // Fetch METAR weather data on mount
   useEffect(() => {
@@ -778,19 +802,37 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       >
         {hoverInfo && (
           <div className="bg-slate-900/95 backdrop-blur-md border border-white/10 rounded-xl px-4 py-3 shadow-2xl max-w-xs">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-[10px] uppercase tracking-widest text-indigo-300/60">
-                {hoverInfo.country.continent}
-              </span>
-            </div>
-            <h3 className="text-white font-medium text-sm mb-2">
-              {hoverInfo.country.name}
-            </h3>
-            {hoverInfo.airportInfo && (
-              <div className="border-t border-white/10 pt-2">
+            {hoverInfo.country ? (
+              <>
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[10px] uppercase tracking-widest text-white/40">
-                    Nearest Station
+                  <span className="text-[10px] uppercase tracking-widest text-indigo-300/60">
+                    {hoverInfo.country.continent}
+                  </span>
+                </div>
+                <h3 className="text-white font-medium text-sm mb-2">
+                  {hoverInfo.country.name}
+                </h3>
+                {hoverInfo.airportInfo && (
+                  <div className="border-t border-white/10 pt-2">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-[10px] uppercase tracking-widest text-white/40">
+                        Nearest Station
+                      </span>
+                    </div>
+                    <p className="text-indigo-200 text-sm font-medium mb-1">
+                      {hoverInfo.airportInfo.airport.name}
+                    </p>
+                    <p className="text-white/70 text-xs leading-relaxed">
+                      {getTempDescription(hoverInfo.airportInfo.temp, unit, formatTemp)}
+                    </p>
+                  </div>
+                )}
+              </>
+            ) : hoverInfo.airportInfo && (
+              <>
+                <div className="flex items-center gap-2 mb-1">
+                  <span className="text-[10px] uppercase tracking-widest text-cyan-300/60">
+                    Island / Coastal
                   </span>
                 </div>
                 <p className="text-indigo-200 text-sm font-medium mb-1">
@@ -799,7 +841,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                 <p className="text-white/70 text-xs leading-relaxed">
                   {getTempDescription(hoverInfo.airportInfo.temp, unit, formatTemp)}
                 </p>
-              </div>
+              </>
             )}
           </div>
         )}
