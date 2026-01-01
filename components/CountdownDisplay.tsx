@@ -71,7 +71,7 @@ const CountdownDisplay: React.FC<CountdownDisplayProps> = ({ timezone, timeRemai
         transition={{ duration: 0.5, ease: "easeOut" }}
         className="text-center mb-0.5"
       >
-        <div className="inline-flex items-center gap-1 text-emerald-300/70 text-[8px] sm:text-[10px] font-medium tracking-wider mb-0.5 uppercase">
+        <div className="inline-flex items-center gap-1 text-emerald-300/70 text-[8px] sm:text-[10px] font-medium tracking-wider mb-0.5 uppercase animate-pulse">
             <Globe size={8} className="sm:w-2.5 sm:h-2.5" />
             <span>Upcoming Midnight</span>
         </div>
