@@ -2,8 +2,8 @@ name: Update Temperatures
 
 on:
   schedule:
-    # Run 4 times per day: midnight, 6am, noon, 6pm UTC
-    - cron: '0 0,6,12,18 * * *'
+    # Run every 30 minutes
+    - cron: '*/30 * * * *'
   workflow_dispatch: # Allow manual trigger
 
 jobs:
