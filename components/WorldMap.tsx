@@ -79,6 +79,7 @@ interface WorldMapProps {
   pastTimezones: TimezoneData[];
   devCelebrationOffset?: number | null; // For testing: trigger celebration on this offset
   devTrigger?: number; // Increment to re-trigger celebration
+  allCelebrated?: boolean; // When true, sparkle the entire globe
 }
 
 interface HoverInfo {
@@ -132,7 +133,7 @@ const getTempDescription = (tempC: number, unit: 'C' | 'F', formatTemp: (c: numb
   return `Very hot ${formatted}`;
 };
 
-const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, devCelebrationOffset, devTrigger }) => {
+const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, devCelebrationOffset, devTrigger, allCelebrated }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -572,17 +573,31 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         }
       };
 
-      // For each past timezone, generate sparkles in vertical bands on land
-      pastTimezones.forEach(tz => {
-        const isCelebrating = tz.offset === celebratingOffset && currentIntensity > 0;
-        generateSparklesForOffset(tz.offset, isCelebrating);
-      });
+      // When all timezones have celebrated, sparkle the entire globe
+      if (allCelebrated) {
+        // Generate sparkles across all longitudes
+        for (let i = 0; i < 3; i++) {
+          if (Math.random() > 0.7) {
+            const sparkLng = Math.random() * 360 - 180; // Full longitude range
+            const sparkLat = Math.random() * 130 - 60;
+            const x = (sparkLng + 180) * (canvas.width / 360);
+            const y = ((-1 * sparkLat) + 90) * (canvas.height / 180);
+            addSparkleOnLand(x, y, sparkLat, sparkLng, false, 0);
+          }
+        }
+      } else {
+        // For each past timezone, generate sparkles in vertical bands on land
+        pastTimezones.forEach(tz => {
+          const isCelebrating = tz.offset === celebratingOffset && currentIntensity > 0;
+          generateSparklesForOffset(tz.offset, isCelebrating);
+        });
 
-      // Dev mode: also generate celebration sparkles for the celebrating offset even if not in pastTimezones
-      if (celebratingOffset !== null && currentIntensity > 0) {
-        const isAlreadyInPast = pastTimezones.some(tz => tz.offset === celebratingOffset);
-        if (!isAlreadyInPast) {
-          generateSparklesForOffset(celebratingOffset, true);
+        // Dev mode: also generate celebration sparkles for the celebrating offset even if not in pastTimezones
+        if (celebratingOffset !== null && currentIntensity > 0) {
+          const isAlreadyInPast = pastTimezones.some(tz => tz.offset === celebratingOffset);
+          if (!isAlreadyInPast) {
+            generateSparklesForOffset(celebratingOffset, true);
+          }
         }
       }
 
@@ -615,7 +630,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [activeFireworks, pastTimezones, landMask, metarReady]);
+  }, [activeFireworks, pastTimezones, landMask, metarReady, allCelebrated]);
 
   return (
     <div ref={containerRef} className="relative w-full h-full">

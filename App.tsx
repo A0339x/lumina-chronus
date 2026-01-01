@@ -217,6 +217,7 @@ const App: React.FC = () => {
               pastTimezones={pastTimezones}
               devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
               devTrigger={devCelebrationKey}
+              allCelebrated={allCelebrated}
             />
           </div>
 
@@ -267,6 +268,7 @@ const App: React.FC = () => {
                         pastTimezones={pastTimezones}
                         devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
                         devTrigger={devCelebrationKey}
+                        allCelebrated={allCelebrated}
                       />
                   </div>
               </div>
