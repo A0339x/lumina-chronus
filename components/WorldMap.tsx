@@ -5,7 +5,7 @@ import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirpor
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 
-const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-50m.json";
+const geoUrl = "https://cdn.jsdelivr.net/npm/world-atlas@2/countries-10m.json";
 
 // Convert temperature (Celsius) to color
 // Range: -40°C (blue) to +40°C (red)
