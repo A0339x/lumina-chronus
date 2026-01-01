@@ -551,11 +551,33 @@ const AIRPORTS: Airport[] = [
 ];
 
 // Hardcoded temperatures - auto-updated by GitHub Actions
-// Last updated: 2026-01-01T00:00:00.000Z
-// Coverage: 500 airports
+// Last updated: 2026-01-01T13:51:21.386Z
+// Coverage: 476 airports
 const HARDCODED_TEMPS: Record<string, number> = {
-  // Temperatures will be populated by GitHub Actions
-  // Initial values based on seasonal averages
+  "KATL": 3, "KLAX": 15, "KORD": -12, "KDFW": 5, "KDEN": 5, "KJFK": -4, "KSFO": 11, "KSEA": 2, "KLAS": 8, "KMCO": 8, "KEWR": -4, "KMIA": 11, "KPHX": 14, "KIAH": 4, "KBOS": -2, "KMSP": -15, "KFLL": 11, "KDTW": -14, "KPHL": -3, "KLGA": -4,
+  "KBWI": -2, "KSLC": 2, "KDCA": -2, "KIAD": -3, "KSAN": 17, "KTPA": 8, "KPDX": 4, "KSTL": 0, "KHNL": 23, "KMEM": 3, "KAUS": 5, "KBNA": 1, "KRDU": 3, "KCLT": 3, "KSMF": 8, "KSJC": 11, "KOAK": 11, "KCLE": -12, "KMKE": -15, "KPIT": -13,
+  "KIND": -5, "KCVG": -4, "KMCI": -1, "KSAT": 3, "KHOU": 5, "KDAL": 7, "KMDW": -11, "PANC": -9, "PAFA": -38, "CYYZ": -14, "CYVR": 3, "CYUL": -11, "CYYC": -6, "CYEG": -8, "CYOW": -16, "CYWG": -19, "CYHZ": 0, "CYQB": -9, "CYYJ": 4, "CYLW": -3,
+  "CYXE": -21, "CYQR": -14, "CYZF": -31, "CYXY": -24, "CYQT": -26, "CYYT": 2, "MMMX": 7, "MMUN": 17, "MMGL": 13, "MMMY": 9, "MMTJ": 16, "MMSM": 26, "MMMD": 18, "MMCZ": 20, "MMSD": 20, "MGGT": 13, "MSLP": 25, "MHTG": 20, "MNMG": 24, "MROC": 25,
+  "MPTO": 27, "MKJP": 26, "TNCM": 26, "TBPB": 27, "TTPP": 29, "MWCR": 22, "MUHA": 18, "MDSD": 24, "MDPP": 25, "MTPP": 26, "TJSJ": 26, "TIST": 26, "TLPL": 28, "TAPA": 26, "SBGR": 29, "SBGL": 36, "SBBR": 27, "SBCF": 29, "SBSV": 29, "SBRF": 32,
+  "SBPA": 31, "SBCT": 25, "SBFZ": 31, "SCEL": 27, "SAEZ": 24, "SABE": 24, "SACO": 31, "SAME": 30, "SLLP": 11, "SLVR": 26, "SPJC": 18, "SEQM": 14, "SEGU": 25, "SKBO": 14, "SKMR": 29, "SKCL": 22, "SKMD": 25, "SKRG": 16, "SVMI": 27, "SUMU": 26,
+  "SGAS": 27, "SBBV": 30, "SMJP": 28, "SYCJ": 27, "EGLL": 6, "EGKK": 5, "EGSS": 5, "EGLC": 6, "EGCC": 6, "EGBB": 6, "EGPH": 4, "EGPF": 5, "EGGW": 4, "EGNX": 6, "EGNT": 3, "EGGP": 7, "EGHI": 7, "EGGD": 5, "EGPD": 2, "EGAA": 5,
+  "EIDW": 6, "EICK": 6, "EINN": 8, "LFPG": 4, "LFPO": 3, "LFML": 10, "LFLL": 4, "LFMN": 12, "LFBD": 3, "LFBO": 4, "LFRS": 2, "LFSB": 1, "LFPB": 4, "EDDF": 3, "EDDM": 2, "EDDB": 2, "EDDL": 3, "EDDH": 2, "EDDK": 4, "EDDS": 3,
+  "EDDW": 3, "EDDN": 1, "EDDV": 3, "EDDP": 3, "LEMD": 6, "LEBL": 12, "LEPA": 13, "LEMG": 15, "LEVC": 14, "LEAL": 14, "LEZL": 14, "GCLP": 22, "GCTS": 18, "GCLA": 19, "GCFV": 23, "LPPT": 13, "LPPR": 10, "LPFR": 17, "LPMA": 17, "LIRF": 11,
+  "LIMC": 4, "LIME": 3, "LIPZ": 4, "LIRN": 10, "LIML": 4, "LIPE": 7, "LICC": 12, "LICJ": 15, "LIRA": 10, "LIRP": 7, "LIMF": 5, "LIEO": 14, "LIEE": 14, "EHAM": 6, "EHRD": 6, "EHEH": 4, "EBBR": 4, "EBCI": 3, "ELLX": 0, "LSZH": 1,
+  "LSGG": 5, "LSZB": 1, "LOWW": 5, "LOWS": 0, "LOWG": 3, "LOWI": 1, "LKPR": 0, "EPWA": 1, "EPKK": 1, "EPGD": 0, "EPWR": 2, "EPPO": 1, "EKCH": 4, "ESSA": 1, "ENGM": -2, "EFHK": -11, "BIKF": 4, "ESGG": 2, "ESMS": 3, "ENBR": 1,
+  "ENZV": 6, "ENTC": -11, "EFOU": -19, "EFRO": -19, "LGAV": 6, "LGTS": 5, "LGIR": 9, "LGKR": 10, "LGRP": 8, "LGSR": 8, "LGMK": 7, "LTFM": 1, "LTBA": 2, "LTFJ": 2, "LTAI": 8, "LTAC": -4, "LTBJ": 3, "LTBS": 10, "LTFE": 5, "LCLK": 15,
+  "LCPH": 14, "LHBP": 3, "LROP": 0, "LBSF": 0, "LYBE": 5, "LDZA": 6, "LDDU": 7, "LDSP": 8, "LJLJ": 4, "LWSK": 2, "LATI": 7, "UKBB": -11, "UKLL": -2, "UUEE": -11, "UUDD": -11, "UUWW": -11, "ULLI": -9, "UWWW": -10, "USSS": -10, "UNNT": -9,
+  "UUOB": -30, "UHWW": -14, "UEEE": -26, "OMDB": 21, "OMDW": 21, "OMAA": 21, "OMSJ": 21, "OTHH": 20, "OERK": 23, "OEJN": 28, "OEDF": 21, "OEMA": 25, "OKBK": 19, "OBBI": 20, "OOMS": 22, "OYAA": 18, "OIIE": 7, "OIII": 7, "OISS": 11, "OIKB": 20,
+  "OIAW": 16, "OIKK": 12, "OICC": 8, "LLBG": 16, "OLBA": 15, "OJAM": 13, "ORBI": 16, "ORER": 7, "GMMN": 23, "GMME": 22, "GMMX": 23, "GMTT": 18, "GMFF": 18, "GMAD": 25, "DAAG": 17, "DAOO": 17, "DTTA": 17, "DTMB": 16, "DTTJ": 16, "HECA": 20,
+  "HEGN": 23, "HESH": 22, "HEBA": 24, "HEAX": 16, "HLLT": 17, "DNMM": 33, "DNAA": 37, "DGAA": 31, "DIAP": 30, "GOBD": 33, "GABS": 34, "GVNP": 29, "GBYD": 29, "GLRB": 28, "DXXX": 32, "DBBB": 32, "HKJK": 22, "HKMO": 31, "HTDA": 29, "HTKJ": 27,
+  "HUEN": 26, "HRYR": 27, "HAAB": 21, "HDAM": 26, "HCMM": 30, "OYSN": 23, "FMEE": 26, "FIMP": 23, "FMCH": 30, "FMMI": 23, "FSIA": 28, "FKKD": 29, "FKYS": 30, "FOOL": 29, "FZAA": 28, "FCBB": 27, "FLLK": 27, "FVHA": 27, "FLLS": 27, "FYWH": 28,
+  "FBSK": 33, "FAOR": 24, "FACT": 26, "FALE": 24, "FAPE": 25, "FQMA": 32, "FWKI": 23, "ZBAA": -5, "ZBAD": -6, "ZSPD": 5, "ZSSS": 3, "ZGGG": 13, "VHHH": 17, "ZGSZ": 16, "ZUUU": 7, "ZUCK": 9, "ZHCC": 0, "ZLXY": 0, "ZWSH": -11, "ZYHB": -21,
+  "ZYTX": -15, "ZSAM": 13, "ZGKL": 5, "ZSNJ": 1, "ZSHC": 4, "ZPPP": 8, "ZBTJ": -5, "VMMC": 16, "RJTT": 6, "RJAA": 3, "RJBB": 7, "RJOO": 3, "RJCC": -13, "RJFF": 4, "RJGG": 6, "ROAH": 18, "RJSS": 0, "RJSN": 3, "RJOK": 5, "RKSI": -7,
+  "RKSS": -10, "RKPK": -4, "RKPC": 4, "RKTN": -7, "ZKPY": -14, "WSSS": 26, "WMKK": 26, "WMKP": 29, "WBKK": 28, "WBGG": 24, "VTBS": 28, "VTBD": 27, "VTSP": 28, "VTCC": 21, "VTSS": 27, "VTUK": 26, "VVNB": 18, "VVTS": 25, "VVDN": 19, "VVCR": 21,
+  "VDPP": 25, "VDSR": 23, "VLVT": 22, "VLLB": 21, "VYYY": 25, "VYMD": 21, "VGHS": 16, "VGCG": 20, "VECC": 18, "VRMM": 27, "VCBI": 27, "WIII": 26, "WADD": 29, "WARR": 27, "WIHH": 27, "WIMM": 26, "WIBB": 28, "WAFF": 27, "WICC": 23, "WASS": 28,
+  "RPLL": 27, "RPLC": 24, "RPVM": 25, "RPVD": 26, "RPVK": 24, "WBSB": 26, "WBLL": 27, "VIDP": 14, "VABB": 25, "VOBL": 23, "VOMM": 25, "VEBS": 18, "VOHY": 22, "VAAH": 23, "VOCI": 28, "VAGO": 26, "VOTP": 24, "VIAR": 13, "VIJP": 18, "VELR": 12,
+  "VOCL": 27, "VOTV": 28, "VEPT": 15, "VNKT": 11, "OPKC": 23, "OPLA": 13, "OPIS": 12, "RCTP": 16, "RCSS": 15, "RCMQ": 15, "RCKH": 18, "RCNN": 17, "YSSY": 14, "YMML": 14, "YBBN": 23, "YPPH": 28, "YPAD": 19, "YBCG": 20, "YBCS": 24, "YSCB": 12,
+  "YMHB": 14, "NZAA": 19, "NZWN": 17, "NZCH": 14, "NZQN": 14, "NZDN": 12, "NFFN": 26, "NWWW": 26, "NTAA": 27, "NSFA": 28, "NIUE": 27, "PGSN": 27, "PGUM": 27, "PHOG": 23, "PHKO": 26, "PHLH": 20,
 };
 
 // Convert to Map for faster lookups
