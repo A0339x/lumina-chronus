@@ -333,10 +333,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
       const width = containerRef.current.offsetWidth;
       const height = containerRef.current.offsetHeight;
+
+      // Skip if container has no dimensions yet
+      if (width === 0 || height === 0) {
+        // Retry after a short delay
+        setTimeout(createLandMask, 100);
+        return;
+      }
+
       maskCanvas.width = width;
       maskCanvas.height = height;
 
-      const ctx = maskCanvas.getContext('2d');
+      const ctx = maskCanvas.getContext('2d', { willReadFrequently: true });
       if (!ctx) return;
 
       // Find the SVG inside the mask map
