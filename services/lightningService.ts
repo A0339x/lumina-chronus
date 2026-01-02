@@ -18,7 +18,9 @@ const MAX_STRIKES = 100;
 const MAX_AGE_MS = 60000; // Show strikes for 60 seconds
 const WS_SERVERS = [
   'wss://ws1.blitzortung.org',
-  'ws://ws1.blitzortung.org',
+  'wss://ws7.blitzortung.org',
+  'wss://ws8.blitzortung.org',
+  'wss://ws2.blitzortung.org',
 ];
 
 let currentServerIndex = 0;
@@ -69,10 +71,8 @@ export function connectLightning() {
 
     ws.onopen = () => {
       console.log('[Lightning] WebSocket connected');
-      // Subscribe to global strikes (no geographic filter)
-      // Blitzortung expects a JSON message to set region
-      // Empty/global subscription
-      ws?.send(JSON.stringify({ west: -180, east: 180, north: 90, south: -90 }));
+      // Subscribe to global strikes - protocol command to start receiving
+      ws?.send(JSON.stringify({ a: 418 }));
     };
 
     ws.onmessage = (event) => {
