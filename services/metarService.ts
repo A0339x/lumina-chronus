@@ -558,13 +558,32 @@ const AIRPORTS: Airport[] = [
 // Dynamic weather cache - fetched from Cloudflare Worker
 interface AirportWeather { temp: number; conditions: WeatherCondition[]; intensity: WeatherIntensity; }
 
-// Weather cache - populated from Worker API
+// Weather cache - populated directly from Open-Meteo API (client-side)
 let weatherCache: Map<string, AirportWeather> = new Map();
 let lastWeatherFetch = 0;
 let weatherFetchInProgress = false;
 const WEATHER_CACHE_TTL = 600000; // 10 minutes
 
-// Fetch weather data from our Cloudflare Worker
+// WMO Weather Codes to our condition types
+// Only returns SIGNIFICANT weather - filters out light drizzle/rain
+function parseWeatherCode(code: number): WeatherCondition {
+  // Thunderstorm (95-99) - always significant
+  if (code >= 95) return 'thunderstorm';
+  // Snow - moderate/heavy only (73, 75, 77, 85-86)
+  if (code >= 73 && code <= 77) return 'snow';
+  if (code >= 85 && code <= 86) return 'snow';
+  // Freezing rain/drizzle (56-57, 66-67) - always hazardous
+  if ((code >= 56 && code <= 57) || (code >= 66 && code <= 67)) return 'freezing';
+  // Rain - moderate/heavy only (63, 65, 81, 82)
+  if (code === 63 || code === 65) return 'rain';
+  if (code === 81 || code === 82) return 'rain';
+  // Fog (45-48) - always significant for visibility
+  if (code >= 45 && code <= 48) return 'fog';
+  // Everything else - not significant
+  return null;
+}
+
+// Fetch weather data directly from Open-Meteo (client-side, bypasses shared Worker IP limits)
 async function refreshWeatherCache(): Promise<void> {
   if (weatherFetchInProgress) return;
 
@@ -574,25 +593,45 @@ async function refreshWeatherCache(): Promise<void> {
   weatherFetchInProgress = true;
 
   try {
-    const response = await fetch('/api/data?type=weather');
-    if (!response.ok) throw new Error(`Weather API error: ${response.status}`);
+    // Fetch in batches of 100 (Open-Meteo limit)
+    for (let i = 0; i < AIRPORTS.length; i += 100) {
+      const batch = AIRPORTS.slice(i, i + 100);
+      const lats = batch.map(a => a.lat).join(',');
+      const lngs = batch.map(a => a.lng).join(',');
 
-    const data = await response.json() as { airports: Record<string, { temp: number; condition: string | null }> };
+      try {
+        const response = await fetch(
+          `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&current_weather=true`,
+          { signal: AbortSignal.timeout(10000) }
+        );
 
-    if (data.airports) {
-      for (const [icao, weather] of Object.entries(data.airports)) {
-        // Support both single condition (from API) and array format
-        const conditions: WeatherCondition[] = weather.condition
-          ? [weather.condition as WeatherCondition]
-          : [];
-        weatherCache.set(icao, {
-          temp: weather.temp,
-          conditions,
-          intensity: null,
-        });
+        if (response.ok) {
+          const data = await response.json() as any;
+          const results = Array.isArray(data) ? data : [data];
+
+          results.forEach((d: any, idx: number) => {
+            if (d?.current_weather && batch[idx]) {
+              const weatherCode = d.current_weather.weathercode ?? 0;
+              const condition = parseWeatherCode(weatherCode);
+              weatherCache.set(batch[idx].icao, {
+                temp: Math.round(d.current_weather.temperature),
+                conditions: condition ? [condition] : [],
+                intensity: null,
+              });
+            }
+          });
+        }
+      } catch (batchError) {
+        console.error(`Weather batch ${i} error:`, batchError);
       }
-      lastWeatherFetch = now;
+
+      // Small delay between batches to be nice to the API
+      if (i + 100 < AIRPORTS.length) {
+        await new Promise(r => setTimeout(r, 100));
+      }
     }
+
+    lastWeatherFetch = now;
   } catch (error) {
     console.error('Failed to fetch weather:', error);
   } finally {
