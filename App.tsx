@@ -363,9 +363,10 @@ const App: React.FC = () => {
           )}
 
           {/* Middle Section: World Map - MAIN FOCUS */}
-          <section className={`w-full flex-1 min-h-0 relative ${isMapFullscreen ? '' : ''}`}>
-              <div className={`${isMapFullscreen ? 'fixed inset-0 z-50' : 'absolute inset-0'}`}>
-                  <WorldMap
+          <section className={`w-full flex-1 flex flex-col items-center justify-center min-h-0 relative ${isMapFullscreen ? 'py-0' : 'py-1'}`}>
+              <div className={`w-full h-full flex items-center justify-center ${isMapFullscreen ? '' : 'max-w-7xl'}`}>
+                  <div className={`${isMapFullscreen ? 'fixed inset-0 z-50' : 'w-full h-full max-h-[60vh] aspect-[2.5/1]'}`}>
+                      <WorldMap
                         activeFireworks={mapFireworks}
                         pastTimezones={pastTimezones}
                         devCelebrationOffset={devCelebrationKey > 0 ? devCelebrationOffset : null}
@@ -374,7 +375,8 @@ const App: React.FC = () => {
                         trackedFlights={visibleFlightCallsigns}
                         isFullscreen={isMapFullscreen}
                         onToggleFullscreen={() => setIsMapFullscreen(prev => !prev)}
-                  />
+                      />
+                  </div>
               </div>
               {/* Flight Tracker - Hidden for now */}
               {/* <div className="absolute top-2 right-4 z-20">
