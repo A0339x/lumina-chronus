@@ -264,32 +264,38 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const centerRef = useRef<[number, number]>([0, 20]);
   const animationRef = useRef<number | null>(null);
 
-  // Smooth zoom/pan animation
+  // Smooth zoom/pan animation - updates refs synchronously for canvas sync
   useEffect(() => {
     const animate = () => {
-      const LERP_FACTOR = 0.15; // Smoothness (0.1 = smoother, 0.3 = snappier)
+      const LERP_FACTOR = 0.35; // Snappier animation (0.1 = slow, 0.5 = fast)
 
       let needsUpdate = false;
 
-      // Animate zoom
-      const zoomDiff = targetZoom - zoom;
+      // Animate zoom - update ref synchronously
+      const zoomDiff = targetZoom - zoomRef.current;
       if (Math.abs(zoomDiff) > 0.001) {
-        setZoom(prev => prev + zoomDiff * LERP_FACTOR);
+        const newZoom = zoomRef.current + zoomDiff * LERP_FACTOR;
+        zoomRef.current = newZoom; // Update ref immediately for canvas
+        setZoom(newZoom);
         needsUpdate = true;
-      } else if (zoom !== targetZoom) {
+      } else if (zoomRef.current !== targetZoom) {
+        zoomRef.current = targetZoom;
         setZoom(targetZoom);
       }
 
-      // Animate center
-      const centerLngDiff = targetCenter[0] - center[0];
-      const centerLatDiff = targetCenter[1] - center[1];
-      if (Math.abs(centerLngDiff) > 0.01 || Math.abs(centerLatDiff) > 0.01) {
-        setCenter([
-          center[0] + centerLngDiff * LERP_FACTOR,
-          center[1] + centerLatDiff * LERP_FACTOR
-        ]);
+      // Animate center - update ref synchronously
+      const centerLngDiff = targetCenter[0] - centerRef.current[0];
+      const centerLatDiff = targetCenter[1] - centerRef.current[1];
+      if (Math.abs(centerLngDiff) > 0.001 || Math.abs(centerLatDiff) > 0.001) {
+        const newCenter: [number, number] = [
+          centerRef.current[0] + centerLngDiff * LERP_FACTOR,
+          centerRef.current[1] + centerLatDiff * LERP_FACTOR
+        ];
+        centerRef.current = newCenter; // Update ref immediately for canvas
+        setCenter(newCenter);
         needsUpdate = true;
-      } else if (center[0] !== targetCenter[0] || center[1] !== targetCenter[1]) {
+      } else if (centerRef.current[0] !== targetCenter[0] || centerRef.current[1] !== targetCenter[1]) {
+        centerRef.current = targetCenter;
         setCenter(targetCenter);
       }
 
@@ -311,13 +317,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         animationRef.current = null;
       }
     };
-  }, [targetZoom, targetCenter, zoom, center]);
-
-  // Keep refs in sync for canvas rendering
-  useEffect(() => {
-    zoomRef.current = zoom;
-    centerRef.current = center;
-  }, [zoom, center]);
+  }, [targetZoom, targetCenter]);
 
   // Zoom constraints
   const MIN_ZOOM = 1;
@@ -545,7 +545,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     if (newLng > 180) newLng -= 360;
     if (newLng < -180) newLng += 360;
 
-    // Direct update for dragging (responsive)
+    // Direct update for dragging (responsive) - update ref first for canvas sync
+    centerRef.current = [newLng, newLat];
     setCenter([newLng, newLat]);
     setTargetCenter([newLng, newLat]);
   }, [isDragging, targetZoom]);
