@@ -16,7 +16,7 @@ import Onboarding from './components/Onboarding';
 import RotatePrompt from './components/RotatePrompt';
 import FlightTracker, { TrackedFlight } from './components/FlightTracker';
 import { TemperatureProvider } from './contexts/TemperatureContext';
-import { Loader2, Heart, Info } from 'lucide-react';
+import { Loader2, Heart, Info, Maximize, Minimize } from 'lucide-react';
 
 // Load tracked flights from localStorage
 const loadTrackedFlights = (): TrackedFlight[] => {
@@ -75,6 +75,9 @@ const App: React.FC = () => {
 
   // Onboarding state - now on-demand instead of automatic
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  // Fullscreen map mode
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
 
   // First-time visitor hint for info button
   const [showInfoHint, setShowInfoHint] = useState(() => {
@@ -180,9 +183,20 @@ const App: React.FC = () => {
     return () => clearInterval(intervalId);
   }, [updateTimer, isInitializing]);
 
+  // Keyboard shortcuts: Escape exits fullscreen, Shift+F toggles fullscreen
   // Dev mode: Shift+C triggers celebration, Shift+U shows unity message
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Escape exits fullscreen
+      if (e.key === 'Escape' && isMapFullscreen) {
+        setIsMapFullscreen(false);
+        return;
+      }
+      // Shift+F toggles fullscreen
+      if (e.shiftKey && e.key.toLowerCase() === 'f') {
+        setIsMapFullscreen(prev => !prev);
+        return;
+      }
       if (e.shiftKey && e.key.toLowerCase() === 'c' && state) {
         console.log('[DEV MODE] Triggering celebration for', state.timezone.name);
         setDevCelebrationOffset(state.timezone.offset);
@@ -199,7 +213,7 @@ const App: React.FC = () => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [state]);
+  }, [state, isMapFullscreen]);
 
   // Check if all timezones have celebrated
   useEffect(() => {
@@ -225,29 +239,31 @@ const App: React.FC = () => {
           <Fireworks trigger={showConfetti} brief={haveAllTimezonesCelebrated()} />
         )}
 
-        {/* Info button - subtle, in corner */}
-        <button
-          onClick={() => {
-            setShowOnboarding(true);
-            setShowInfoHint(false);
-            localStorage.setItem('lumina-chronos-seen-hint', 'true');
-          }}
-          className={`fixed bottom-4 left-4 z-50 flex items-center gap-2 pl-2 pr-3 py-2 rounded-full border transition-all ${
-            showInfoHint
-              ? 'bg-white/10 border-white/20 text-white/70 animate-pulse'
-              : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white/70 hover:border-white/20'
-          }`}
-          aria-label="About Lumina Chronos"
-        >
-          <Info size={18} />
-          <span
-            className={`text-xs tracking-wide transition-all duration-500 overflow-hidden ${
-              showInfoHint ? 'max-w-[80px] opacity-100' : 'max-w-0 opacity-0'
+        {/* Info button - subtle, in corner (hidden in fullscreen) */}
+        {!isMapFullscreen && (
+          <button
+            onClick={() => {
+              setShowOnboarding(true);
+              setShowInfoHint(false);
+              localStorage.setItem('lumina-chronos-seen-hint', 'true');
+            }}
+            className={`fixed bottom-4 left-4 z-50 flex items-center gap-2 pl-2 pr-3 py-2 rounded-full border transition-all ${
+              showInfoHint
+                ? 'bg-white/10 border-white/20 text-white/70 animate-pulse'
+                : 'bg-white/5 border-white/10 text-white/40 hover:bg-white/10 hover:text-white/70 hover:border-white/20'
             }`}
+            aria-label="About Lumina Chronos"
           >
-            About
-          </span>
-        </button>
+            <Info size={18} />
+            <span
+              className={`text-xs tracking-wide transition-all duration-500 overflow-hidden ${
+                showInfoHint ? 'max-w-[80px] opacity-100' : 'max-w-0 opacity-0'
+              }`}
+            >
+              About
+            </span>
+          </button>
+        )}
 
         {/* Onboarding modal - on demand */}
         {showOnboarding && (
@@ -273,6 +289,8 @@ const App: React.FC = () => {
               devTrigger={devCelebrationKey}
               allCelebrated={allCelebrated}
               trackedFlights={visibleFlightCallsigns}
+              isFullscreen={isMapFullscreen}
+              onToggleFullscreen={() => setIsMapFullscreen(prev => !prev)}
             />
           </div>
 
@@ -284,25 +302,29 @@ const App: React.FC = () => {
             />
           </div> */}
 
-          {/* Countdown or Celebration Header - Top Left */}
-          <div className="absolute top-4 left-4 z-20">
-            {allCelebrated ? (
-              <CelebrationHeader subtitle="Celebrated around the world" />
-            ) : (
-              <MobileCountdown
-                timezone={state.timezone}
-                timeRemaining={state.timeRemaining}
-              />
-            )}
-          </div>
+          {/* Countdown or Celebration Header - Top Left (hidden in fullscreen) */}
+          {!isMapFullscreen && (
+            <div className="absolute top-4 left-4 z-20">
+              {allCelebrated ? (
+                <CelebrationHeader subtitle="Celebrated around the world" />
+              ) : (
+                <MobileCountdown
+                  timezone={state.timezone}
+                  timeRemaining={state.timeRemaining}
+                />
+              )}
+            </div>
+          )}
 
-          {/* Legend - Bottom Right */}
-          <div className="absolute bottom-4 right-4 z-20">
-            <MobileLegend />
-          </div>
+          {/* Legend - Bottom Right (hidden in fullscreen - zoom controls take this spot) */}
+          {!isMapFullscreen && (
+            <div className="absolute bottom-4 right-20 z-20">
+              <MobileLegend />
+            </div>
+          )}
 
-          {/* Unity button - Bottom Center (when applicable) */}
-          {allCelebrated && !showUnityMessage && (
+          {/* Unity button - Bottom Center (when applicable, hidden in fullscreen) */}
+          {!isMapFullscreen && allCelebrated && !showUnityMessage && (
             <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20">
               <button
                 onClick={() => setShowUnityMessage(true)}
@@ -316,24 +338,26 @@ const App: React.FC = () => {
         </div>
 
         {/* DESKTOP LAYOUT - Original centered layout (1024px and up) */}
-        <div className="hidden lg:flex relative z-10 w-full h-full overflow-hidden flex-col items-center p-2 sm:p-3">
+        <div className={`hidden lg:flex relative z-10 w-full h-full overflow-hidden flex-col items-center ${isMapFullscreen ? 'p-0' : 'p-2 sm:p-3'}`}>
 
-          {/* Top Section: Countdown or Celebration Header */}
-          <section className="w-full max-w-4xl flex justify-center shrink-0">
-              {allCelebrated ? (
-                <CelebrationHeader subtitle="Celebrated around the world" />
-              ) : (
-                <CountdownDisplay
-                    timezone={state.timezone}
-                    timeRemaining={state.timeRemaining}
-                />
-              )}
-          </section>
+          {/* Top Section: Countdown or Celebration Header (hidden in fullscreen) */}
+          {!isMapFullscreen && (
+            <section className="w-full max-w-4xl flex justify-center shrink-0">
+                {allCelebrated ? (
+                  <CelebrationHeader subtitle="Celebrated around the world" />
+                ) : (
+                  <CountdownDisplay
+                      timezone={state.timezone}
+                      timeRemaining={state.timeRemaining}
+                  />
+                )}
+            </section>
+          )}
 
           {/* Middle Section: World Map - MAIN FOCUS */}
-          <section className="w-full flex-1 flex flex-col items-center justify-center min-h-0 py-1 relative">
-              <div className="w-full h-full max-w-7xl flex items-center justify-center">
-                  <div className="w-full h-full max-h-[60vh] aspect-[2.5/1]">
+          <section className={`w-full flex-1 flex flex-col items-center justify-center min-h-0 relative ${isMapFullscreen ? 'py-0' : 'py-1'}`}>
+              <div className={`w-full h-full flex items-center justify-center ${isMapFullscreen ? '' : 'max-w-7xl'}`}>
+                  <div className={`w-full h-full ${isMapFullscreen ? '' : 'max-h-[60vh] aspect-[2.5/1]'}`}>
                       <WorldMap
                         activeFireworks={mapFireworks}
                         pastTimezones={pastTimezones}
@@ -341,6 +365,8 @@ const App: React.FC = () => {
                         devTrigger={devCelebrationKey}
                         allCelebrated={allCelebrated}
                         trackedFlights={visibleFlightCallsigns}
+                        isFullscreen={isMapFullscreen}
+                        onToggleFullscreen={() => setIsMapFullscreen(prev => !prev)}
                       />
                   </div>
               </div>
@@ -353,25 +379,27 @@ const App: React.FC = () => {
               </div> */}
           </section>
 
-          {/* Bottom Section: Compact Legend & Footer */}
-          <section className="w-full max-w-xl shrink-0">
-              <TemperatureLegend />
-              <footer className="py-0.5 text-center">
-                  {allCelebrated && !showUnityMessage ? (
-                    <button
-                      onClick={() => setShowUnityMessage(true)}
-                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/80 hover:border-white/20 transition-all text-[10px] sm:text-xs tracking-wide"
-                    >
-                      <Heart size={12} className="text-rose-400/70" />
-                      <span>View Unity Message</span>
-                    </button>
-                  ) : (
-                    <p className="text-white/20 text-[8px] sm:text-[10px] tracking-[0.2em] uppercase">
-                        Lumina Chronos • {state.timezone.name}
-                    </p>
-                  )}
-              </footer>
-          </section>
+          {/* Bottom Section: Compact Legend & Footer (hidden in fullscreen) */}
+          {!isMapFullscreen && (
+            <section className="w-full max-w-xl shrink-0">
+                <TemperatureLegend />
+                <footer className="py-0.5 text-center">
+                    {allCelebrated && !showUnityMessage ? (
+                      <button
+                        onClick={() => setShowUnityMessage(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 border border-white/10 text-white/50 hover:bg-white/10 hover:text-white/80 hover:border-white/20 transition-all text-[10px] sm:text-xs tracking-wide"
+                      >
+                        <Heart size={12} className="text-rose-400/70" />
+                        <span>View Unity Message</span>
+                      </button>
+                    ) : (
+                      <p className="text-white/20 text-[8px] sm:text-[10px] tracking-[0.2em] uppercase">
+                          Lumina Chronos • {state.timezone.name}
+                      </p>
+                    )}
+                </footer>
+            </section>
+          )}
         </div>
       </main>
     </TemperatureProvider>

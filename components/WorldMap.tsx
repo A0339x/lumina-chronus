@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, memo, useState, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
-import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
+import { ZoomIn, ZoomOut, Maximize2, Maximize, Minimize } from 'lucide-react';
 import { FireworkEvent, TimezoneData } from '../types';
 import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportConditions, WeatherCondition, WeatherIntensity } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
@@ -146,6 +146,8 @@ interface WorldMapProps {
   devTrigger?: number; // Increment to re-trigger celebration
   allCelebrated?: boolean; // When true, sparkle the entire globe
   trackedFlights?: string[]; // List of callsigns to track
+  isFullscreen?: boolean; // Fullscreen mode
+  onToggleFullscreen?: () => void; // Toggle fullscreen callback
 }
 
 interface HoverInfo {
@@ -232,7 +234,7 @@ const getTempDescription = (tempC: number, unit: 'C' | 'F', formatTemp: (c: numb
   return `Very hot ${formatted}`;
 };
 
-const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, devCelebrationOffset, devTrigger, allCelebrated, trackedFlights = [] }) => {
+const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, devCelebrationOffset, devTrigger, allCelebrated, trackedFlights = [], isFullscreen = false, onToggleFullscreen }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const maskCanvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -1463,6 +1465,15 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
       {/* Zoom Controls */}
       <div className="absolute bottom-4 right-4 z-40 flex flex-col gap-1">
+        {onToggleFullscreen && (
+          <button
+            onClick={onToggleFullscreen}
+            className="p-2 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-white/70 hover:text-white hover:bg-slate-800/80 transition-all mb-1"
+            title={isFullscreen ? "Exit fullscreen (Esc)" : "Fullscreen (Shift+F)"}
+          >
+            {isFullscreen ? <Minimize size={16} /> : <Maximize size={16} />}
+          </button>
+        )}
         <button
           onClick={handleZoomIn}
           disabled={targetZoom >= MAX_ZOOM}
