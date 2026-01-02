@@ -17,12 +17,11 @@ let listeners: ((strikes: LightningStrike[]) => void)[] = [];
 const MAX_STRIKES = 100;
 const MAX_AGE_MS = 60000; // Show strikes for 60 seconds
 const WS_SERVERS = [
-  'wss://live.lightningmaps.org:443/',
-  'wss://live2.lightningmaps.org:443/',
+  'wss://ws1.blitzortung.org',
+  'wss://ws7.blitzortung.org',
 ];
 
 let currentServerIndex = 0;
-let lastStrokeId = 0;
 
 // Subscribe to strike updates
 export function subscribeLightning(callback: (strikes: LightningStrike[]) => void): () => void {
@@ -70,56 +69,34 @@ export function connectLightning() {
 
     ws.onopen = () => {
       console.log('[Lightning] WebSocket connected');
-      // Subscribe to global strikes with full world bounds
-      const subscribeMsg = {
-        v: 24,           // API version
-        i: lastStrokeId, // Last stroke ID we have
-        s: false,        // Don't need station data
-        x: 0,            // XHR errors
-        w: 0,            // WebSocket errors
-        z: 2,            // Zoom level (world view)
-        b: true,         // Is visible
-        h: '',           // Location hash
-        p: [90, 180, -90, -180], // World bounds [NE_lat, NE_lng, SW_lat, SW_lng]
-      };
-      ws?.send(JSON.stringify(subscribeMsg));
+      // Blitzortung protocol: send {"a":418} to start receiving strokes
+      ws?.send('{"a":418}');
     };
 
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
 
-        // LightningMaps sends strokes in a 'strokes' array
-        if (data.strokes && Array.isArray(data.strokes)) {
-          for (const stroke of data.strokes) {
-            if (stroke.lat !== undefined && stroke.lon !== undefined && stroke.time !== undefined) {
-              const strike: LightningStrike = {
-                lat: stroke.lat,
-                lon: stroke.lon,
-                time: stroke.time, // Already in milliseconds
-                age: 0,
-              };
+        // Blitzortung sends individual strokes with time in nanoseconds
+        if (data.lat !== undefined && data.lon !== undefined && data.time !== undefined) {
+          const strike: LightningStrike = {
+            lat: data.lat,
+            lon: data.lon,
+            time: Math.floor(data.time / 1000000), // Convert nanoseconds to milliseconds
+            age: 0,
+          };
 
-              // Track the latest stroke ID
-              if (stroke.id && stroke.id > lastStrokeId) {
-                lastStrokeId = stroke.id;
-              }
-
-              strikes.push(strike);
-            }
-          }
+          strikes.push(strike);
 
           // Keep only recent strikes
           if (strikes.length > MAX_STRIKES) {
             strikes = strikes.slice(-MAX_STRIKES);
           }
 
-          if (data.strokes.length > 0) {
-            notifyListeners();
-          }
+          notifyListeners();
         }
       } catch (e) {
-        // Ignore parse errors
+        // Ignore parse errors - some messages may not be strike data
       }
     };
 
