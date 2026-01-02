@@ -71,7 +71,12 @@ const App: React.FC = () => {
     console.log('[Lumina] All celebrated:', result, 'UTC:', new Date().toISOString());
     return result;
   });
-  const [showUnityMessage, setShowUnityMessage] = useState(() => haveAllTimezonesCelebrated()); // Show unity when all celebrated
+  // Unity message: only auto-show once (first time all celebrated), then user can bring it up manually
+  const [showUnityMessage, setShowUnityMessage] = useState(() => {
+    const allDone = haveAllTimezonesCelebrated();
+    const hasSeenUnity = localStorage.getItem('lumina-chronos-seen-unity') === 'true';
+    return allDone && !hasSeenUnity;
+  });
 
   // Onboarding state - now on-demand instead of automatic
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -275,7 +280,10 @@ const App: React.FC = () => {
 
         {/* Unity message when all timezones have celebrated */}
         {allCelebrated && showUnityMessage && (
-          <UnityMessage onShowEarth={() => setShowUnityMessage(false)} />
+          <UnityMessage onShowEarth={() => {
+            setShowUnityMessage(false);
+            localStorage.setItem('lumina-chronos-seen-unity', 'true');
+          }} />
         )}
 
         {/* MOBILE LAYOUT - Full screen map with overlays (up to 1024px) */}
