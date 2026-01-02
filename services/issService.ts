@@ -1,6 +1,6 @@
 // ISS (International Space Station) tracking service
 // Uses the "Where The ISS At?" API for real-time position data
-// Smoothly interpolates position between API calls for animation
+// Smoothly interpolates between API positions for animation
 
 export interface ISSPosition {
   lat: number;
@@ -11,60 +11,22 @@ export interface ISSPosition {
   timestamp: number;
 }
 
-// Store positions for smooth interpolation
+// API data
 let currentPosition: ISSPosition | null = null;
-let lastFetch = 0;
-let lastHeading = 0;
+let lastFetchTime = 0;
+let hasInitialized = false;
 const CACHE_DURATION = 5000; // 5 seconds between API calls
 
-// Smooth rendering state
+// For smooth movement: track position history
+let positionHistory: Array<{ lat: number; lng: number; time: number }> = [];
+const MAX_HISTORY = 3;
+
+// Rendered position (what we actually display)
 let renderedLat = 0;
 let renderedLng = 0;
-let targetLat = 0;
-let targetLng = 0;
-let hasInitialized = false;
 let lastRenderTime = 0;
 
-// Earth's radius in km
-const EARTH_RADIUS = 6371;
-
-// Calculate the ISS's approximate heading based on two positions
-function calculateHeading(lat1: number, lng1: number, lat2: number, lng2: number): number {
-  const dLng = (lng2 - lng1) * Math.PI / 180;
-  const lat1Rad = lat1 * Math.PI / 180;
-  const lat2Rad = lat2 * Math.PI / 180;
-
-  const x = Math.sin(dLng) * Math.cos(lat2Rad);
-  const y = Math.cos(lat1Rad) * Math.sin(lat2Rad) - Math.sin(lat1Rad) * Math.cos(lat2Rad) * Math.cos(dLng);
-
-  let heading = Math.atan2(x, y) * 180 / Math.PI;
-  return (heading + 360) % 360;
-}
-
-// Move a point along a great circle given heading and distance
-function moveAlongGreatCircle(lat: number, lng: number, heading: number, distanceKm: number): { lat: number; lng: number } {
-  const angularDistance = distanceKm / EARTH_RADIUS;
-  const headingRad = heading * Math.PI / 180;
-  const latRad = lat * Math.PI / 180;
-  const lngRad = lng * Math.PI / 180;
-
-  const newLatRad = Math.asin(
-    Math.sin(latRad) * Math.cos(angularDistance) +
-    Math.cos(latRad) * Math.sin(angularDistance) * Math.cos(headingRad)
-  );
-
-  const newLngRad = lngRad + Math.atan2(
-    Math.sin(headingRad) * Math.sin(angularDistance) * Math.cos(latRad),
-    Math.cos(angularDistance) - Math.sin(latRad) * Math.sin(newLatRad)
-  );
-
-  return {
-    lat: newLatRad * 180 / Math.PI,
-    lng: ((newLngRad * 180 / Math.PI) + 540) % 360 - 180 // Normalize to -180 to 180
-  };
-}
-
-// Lerp helper for smooth transitions
+// Lerp helper
 function lerp(a: number, b: number, t: number): number {
   return a + (b - a) * t;
 }
@@ -72,21 +34,41 @@ function lerp(a: number, b: number, t: number): number {
 // Handle longitude wrapping for smooth interpolation across the dateline
 function lerpLongitude(a: number, b: number, t: number): number {
   let diff = b - a;
-  // If the difference is greater than 180, we're crossing the dateline
   if (diff > 180) diff -= 360;
   if (diff < -180) diff += 360;
   let result = a + diff * t;
-  // Normalize to -180 to 180
   if (result > 180) result -= 360;
   if (result < -180) result += 360;
   return result;
+}
+
+// Calculate velocity (degrees per ms) from position history
+function calculateVelocity(): { latPerMs: number; lngPerMs: number } {
+  if (positionHistory.length < 2) {
+    return { latPerMs: 0, lngPerMs: 0 };
+  }
+
+  const recent = positionHistory[positionHistory.length - 1];
+  const older = positionHistory[positionHistory.length - 2];
+  const timeDiff = recent.time - older.time;
+
+  if (timeDiff <= 0) return { latPerMs: 0, lngPerMs: 0 };
+
+  let lngDiff = recent.lng - older.lng;
+  if (lngDiff > 180) lngDiff -= 360;
+  if (lngDiff < -180) lngDiff += 360;
+
+  return {
+    latPerMs: (recent.lat - older.lat) / timeDiff,
+    lngPerMs: lngDiff / timeDiff
+  };
 }
 
 export async function fetchISSPosition(): Promise<ISSPosition | null> {
   const now = Date.now();
 
   // Return cached data if fresh
-  if (currentPosition && (now - lastFetch < CACHE_DURATION)) {
+  if (currentPosition && (now - lastFetchTime < CACHE_DURATION)) {
     return currentPosition;
   }
 
@@ -102,8 +84,6 @@ export async function fetchISSPosition(): Promise<ISSPosition | null> {
 
     const data = await response.json();
 
-    const prevPosition = currentPosition;
-
     currentPosition = {
       lat: data.latitude,
       lng: data.longitude,
@@ -113,29 +93,31 @@ export async function fetchISSPosition(): Promise<ISSPosition | null> {
       timestamp: data.timestamp * 1000,
     };
 
-    // Calculate heading for extrapolation
-    if (prevPosition && currentPosition) {
-      lastHeading = calculateHeading(
-        prevPosition.lat, prevPosition.lng,
-        currentPosition.lat, currentPosition.lng
-      );
+    // Add to position history
+    positionHistory.push({
+      lat: currentPosition.lat,
+      lng: currentPosition.lng,
+      time: now
+    });
+
+    // Keep history bounded
+    if (positionHistory.length > MAX_HISTORY) {
+      positionHistory.shift();
     }
+
+    lastFetchTime = now;
 
     // Initialize rendered position on first fetch
     if (!hasInitialized) {
       renderedLat = currentPosition.lat;
       renderedLng = currentPosition.lng;
+      lastRenderTime = now;
       hasInitialized = true;
     }
-
-    lastFetch = now;
 
     return currentPosition;
   } catch (error) {
     console.error('[ISS] Fetch error:', error);
-    if (now - lastFetch > 30000) {
-      lastFetch = now - 30000;
-    }
     return currentPosition;
   }
 }
@@ -145,34 +127,27 @@ export function getInterpolatedISSPosition(): ISSPosition | null {
   if (!currentPosition || !hasInitialized) return null;
 
   const now = Date.now();
-  const deltaTime = lastRenderTime ? (now - lastRenderTime) / 1000 : 0.016; // seconds since last render
+  const deltaTime = now - lastRenderTime;
   lastRenderTime = now;
 
-  const timeSinceUpdate = now - lastFetch;
+  // Calculate current velocity from history
+  const velocity = calculateVelocity();
 
-  // Calculate where the ISS "should be" based on extrapolation from last known position
-  const maxExtrapolation = 30000; // 30 seconds max
-  const clampedTime = Math.min(timeSinceUpdate, maxExtrapolation);
-  const heading = lastHeading || 45;
-  const velocityKmPerSec = (currentPosition.velocity || 27600) / 3600;
-  const distanceTraveled = velocityKmPerSec * (clampedTime / 1000);
+  // Predict where ISS should be right now based on last known position + velocity
+  const timeSinceFetch = now - lastFetchTime;
+  const predictedLat = currentPosition.lat + velocity.latPerMs * timeSinceFetch;
+  let predictedLng = currentPosition.lng + velocity.lngPerMs * timeSinceFetch;
 
-  const extrapolated = moveAlongGreatCircle(
-    currentPosition.lat,
-    currentPosition.lng,
-    heading,
-    distanceTraveled
-  );
+  // Normalize longitude
+  if (predictedLng > 180) predictedLng -= 360;
+  if (predictedLng < -180) predictedLng += 360;
 
-  targetLat = extrapolated.lat;
-  targetLng = extrapolated.lng;
+  // Smoothly move rendered position towards predicted position
+  // Higher factor = faster catch-up, lower = smoother but more lag
+  const smoothFactor = 0.1;
 
-  // Smoothly move rendered position towards target
-  // Use a smooth factor based on frame time for consistent speed
-  const smoothFactor = Math.min(1, deltaTime * 5); // Smooth over ~200ms
-
-  renderedLat = lerp(renderedLat, targetLat, smoothFactor);
-  renderedLng = lerpLongitude(renderedLng, targetLng, smoothFactor);
+  renderedLat = lerp(renderedLat, predictedLat, smoothFactor);
+  renderedLng = lerpLongitude(renderedLng, predictedLng, smoothFactor);
 
   return {
     ...currentPosition,
