@@ -110,8 +110,16 @@ export function getInterpolatedISSPosition(): ISSPosition | null {
   if (!currentPosition || !hasInitialized) return null;
 
   const now = Date.now();
-  const deltaTime = now - lastRenderTime;
+  let deltaTime = now - lastRenderTime;
   lastRenderTime = now;
+
+  // Cap deltaTime to prevent jumps when returning to a backgrounded tab
+  // If more than 500ms passed, snap to actual position instead
+  if (deltaTime > 500) {
+    renderedLat = currentPosition.lat;
+    renderedLng = currentPosition.lng;
+    return currentPosition;
+  }
 
   // Move at constant velocity
   renderedLat += velocityLat * deltaTime;
