@@ -11,10 +11,11 @@ export interface ISSPosition {
   timestamp: number;
 }
 
-// Store last two positions for interpolation
+// Store positions for smooth interpolation
 let previousPosition: ISSPosition | null = null;
 let currentPosition: ISSPosition | null = null;
 let lastFetch = 0;
+let lastHeading = 0; // Store heading for continuous movement
 const CACHE_DURATION = 5000; // 5 seconds between API calls
 
 // Earth's radius in km
@@ -87,11 +88,25 @@ export async function fetchISSPosition(): Promise<ISSPosition | null> {
       visibility: data.visibility === 'daylight' ? 'daylight' : 'eclipsed',
       timestamp: data.timestamp * 1000,
     };
+
+    // Calculate and store heading for smooth movement
+    if (previousPosition && currentPosition) {
+      lastHeading = calculateHeading(
+        previousPosition.lat, previousPosition.lng,
+        currentPosition.lat, currentPosition.lng
+      );
+    }
+
     lastFetch = now;
 
     return currentPosition;
   } catch (error) {
     console.error('[ISS] Fetch error:', error);
+    // Update lastFetch on failure to prevent runaway interpolation
+    // The interpolation will stay capped at maxInterpolationTime
+    if (now - lastFetch > 30000) {
+      lastFetch = now - 30000; // Keep interpolation capped
+    }
     return currentPosition;
   }
 }
@@ -103,36 +118,33 @@ export function getInterpolatedISSPosition(): ISSPosition | null {
   const now = Date.now();
   const timeSinceUpdate = now - lastFetch;
 
-  // If we have two positions, calculate heading and extrapolate
-  if (previousPosition && currentPosition) {
-    const heading = calculateHeading(
-      previousPosition.lat, previousPosition.lng,
-      currentPosition.lat, currentPosition.lng
-    );
+  // Cap interpolation to prevent runaway extrapolation if API fails
+  // ISS completes an orbit in ~90 minutes, so limit to 30 seconds of extrapolation
+  const maxInterpolationTime = 30000; // 30 seconds
+  const clampedTime = Math.min(timeSinceUpdate, maxInterpolationTime);
 
-    // ISS velocity in km/s (velocity is in km/h)
-    const velocityKmPerSec = currentPosition.velocity / 3600;
+  // Use stored heading (or default ISS heading of ~51.6 degrees for inclination)
+  const heading = lastHeading || 45; // Default roughly NE direction
 
-    // Distance traveled since last update
-    const distanceTraveled = velocityKmPerSec * (timeSinceUpdate / 1000);
+  // ISS velocity in km/s (velocity is in km/h)
+  const velocityKmPerSec = (currentPosition.velocity || 27600) / 3600;
 
-    // Calculate new position along the trajectory
-    const interpolated = moveAlongGreatCircle(
-      currentPosition.lat,
-      currentPosition.lng,
-      heading,
-      distanceTraveled
-    );
+  // Distance traveled since last update (clamped)
+  const distanceTraveled = velocityKmPerSec * (clampedTime / 1000);
 
-    return {
-      ...currentPosition,
-      lat: interpolated.lat,
-      lng: interpolated.lng,
-    };
-  }
+  // Calculate new position along the trajectory
+  const interpolated = moveAlongGreatCircle(
+    currentPosition.lat,
+    currentPosition.lng,
+    heading,
+    distanceTraveled
+  );
 
-  // Fallback: just return current position
-  return currentPosition;
+  return {
+    ...currentPosition,
+    lat: interpolated.lat,
+    lng: interpolated.lng,
+  };
 }
 
 // Format velocity for display
