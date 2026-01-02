@@ -178,6 +178,7 @@ function parseWeatherCode(code: number): string | null {
 
 async function fetchAllAirportWeather(): Promise<WeatherData> {
   const airports: Record<string, AirportWeather> = {};
+  const debug: string[] = [];
 
   // Fetch in batches of 100 (Open-Meteo limit)
   for (let i = 0; i < AIRPORTS.length; i += 100) {
@@ -191,11 +192,15 @@ async function fetchAllAirportWeather(): Promise<WeatherData> {
         { signal: AbortSignal.timeout(10000) } // 10 second timeout
       );
 
+      debug.push(`Batch ${i}: status=${response.status}`);
+
       if (response.ok) {
         const data = await response.json() as any;
 
         // Open-Meteo returns array for multiple locations
         const results = Array.isArray(data) ? data : [data];
+        debug.push(`Batch ${i}: got ${results.length} results`);
+
         results.forEach((d: any, idx: number) => {
           if (d?.current_weather && batch[idx]) {
             const weatherCode = d.current_weather.weathercode ?? 0;
@@ -205,8 +210,12 @@ async function fetchAllAirportWeather(): Promise<WeatherData> {
             };
           }
         });
+      } else {
+        const body = await response.text();
+        debug.push(`Batch ${i}: error body=${body.substring(0, 200)}`);
       }
     } catch (error) {
+      debug.push(`Batch ${i}: exception=${error}`);
       console.error(`Weather batch ${i} error:`, error);
     }
 
@@ -229,6 +238,7 @@ async function fetchAllAirportWeather(): Promise<WeatherData> {
   return {
     airports,
     updatedAt: new Date().toISOString(),
+    debug, // Temporary: remove after debugging
   };
 }
 
