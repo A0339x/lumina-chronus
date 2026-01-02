@@ -634,18 +634,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     return () => clearInterval(interval);
   }, [trackedFlights]);
 
-  // Connect to lightning WebSocket
-  useEffect(() => {
-    connectLightning();
-    const unsubscribe = subscribeLightning((strikes) => {
-      setLightningStrikes(strikes);
-      lightningStrikesRef.current = strikes;
-    });
-    return () => {
-      unsubscribe();
-      disconnectLightning();
-    };
-  }, []);
+  // Lightning WebSocket disabled - awaiting Blitzortung.org API access approval
+  // useEffect(() => {
+  //   connectLightning();
+  //   const unsubscribe = subscribeLightning((strikes) => {
+  //     setLightningStrikes(strikes);
+  //     lightningStrikesRef.current = strikes;
+  //   });
+  //   return () => {
+  //     unsubscribe();
+  //     disconnectLightning();
+  //   };
+  // }, []);
 
   // Fetch ISS position
   useEffect(() => {

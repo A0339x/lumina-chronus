@@ -76,6 +76,7 @@ export function connectLightning() {
     ws.onmessage = (event) => {
       try {
         const data = JSON.parse(event.data);
+        console.log('[Lightning] Message received:', data);
 
         // Blitzortung sends individual strokes with time in nanoseconds
         if (data.lat !== undefined && data.lon !== undefined && data.time !== undefined) {
@@ -86,6 +87,7 @@ export function connectLightning() {
             age: 0,
           };
 
+          console.log('[Lightning] Strike at:', strike.lat, strike.lon);
           strikes.push(strike);
 
           // Keep only recent strikes
@@ -96,7 +98,7 @@ export function connectLightning() {
           notifyListeners();
         }
       } catch (e) {
-        // Ignore parse errors - some messages may not be strike data
+        console.log('[Lightning] Raw message:', event.data);
       }
     };
 
