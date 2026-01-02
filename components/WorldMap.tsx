@@ -1370,7 +1370,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       <canvas ref={maskCanvasRef} className="hidden" />
 
       {/* Hidden map for land mask detection */}
-      <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true">
+      <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
@@ -1378,11 +1378,11 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             center: center
           }}
           style={{
-            width: '100%',
-            height: '100%',
+            width: '150%',
+            height: '150%',
+            marginLeft: '-25%',
+            marginTop: '-25%',
           }}
-          // @ts-ignore
-          preserveAspectRatio="none"
         >
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
@@ -1428,12 +1428,12 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             center: center
           }}
           style={{
-            width: '100%',
-            height: '100%',
+            width: '150%',
+            height: '150%',
+            marginLeft: '-25%',
+            marginTop: '-25%',
             background: 'transparent',
           }}
-          // @ts-ignore - stretch to fill container showing full map
-          preserveAspectRatio="none"
         >
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
