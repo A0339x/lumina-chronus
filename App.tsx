@@ -279,9 +279,9 @@ const App: React.FC = () => {
         )}
 
         {/* MOBILE LAYOUT - Full screen map with overlays (up to 1024px) */}
-        <div className="lg:hidden relative z-10 w-full h-full">
+        <div className="lg:hidden relative z-10 w-full h-full flex items-center justify-center">
           {/* Full screen map - users are in landscape mode */}
-          <div className="absolute inset-0">
+          <div className={`${isMapFullscreen ? 'w-full h-full max-w-[calc(100vh*2)] max-h-[calc(100vw/2)] aspect-[2/1]' : 'absolute inset-0'}`}>
             <WorldMap
               activeFireworks={mapFireworks}
               pastTimezones={pastTimezones}
@@ -357,7 +357,7 @@ const App: React.FC = () => {
           {/* Middle Section: World Map - MAIN FOCUS */}
           <section className={`w-full flex-1 flex flex-col items-center justify-center min-h-0 relative ${isMapFullscreen ? 'py-0' : 'py-1'}`}>
               <div className={`w-full h-full flex items-center justify-center ${isMapFullscreen ? '' : 'max-w-7xl'}`}>
-                  <div className={`w-full h-full ${isMapFullscreen ? '' : 'max-h-[60vh] aspect-[2.5/1]'}`}>
+                  <div className={`${isMapFullscreen ? 'w-full h-full max-w-[calc(100vh*2)] max-h-[calc(100vw/2)] aspect-[2/1]' : 'w-full h-full max-h-[60vh] aspect-[2.5/1]'}`}>
                       <WorldMap
                         activeFireworks={mapFireworks}
                         pastTimezones={pastTimezones}
