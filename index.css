@@ -41,10 +41,17 @@ body {
   border-radius: 10px;
 }
 
-/* Remove any default SVG backgrounds from react-simple-maps */
+/* Remove any default SVG backgrounds and make map fill container */
 .rsm-svg {
   background: transparent !important;
+  width: 100% !important;
+  height: 100% !important;
 }
 .rsm-svg rect {
   fill: transparent !important;
+}
+/* Force SVG to fill container without preserving aspect ratio */
+.rsm-svg[preserveAspectRatio] {
+  width: 100% !important;
+  height: 100% !important;
 }

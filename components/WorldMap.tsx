@@ -1381,6 +1381,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             width: '100%',
             height: '100%',
           }}
+          // @ts-ignore
+          preserveAspectRatio="xMidYMid slice"
         >
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
@@ -1430,6 +1432,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             height: '100%',
             background: 'transparent',
           }}
+          // @ts-ignore - pass through to SVG to fill container
+          preserveAspectRatio="xMidYMid slice"
         >
           <Geographies geography={geoUrl}>
             {({ geographies }) =>
