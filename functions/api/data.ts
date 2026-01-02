@@ -38,7 +38,7 @@ interface FlightCache {
 
 const WEATHER_CACHE_KEY = 'airport-weather-v2';
 const FLIGHT_CACHE_KEY = 'flight-positions';
-const WEATHER_TTL = 1800; // 30 minutes - be gentle on Open-Meteo free tier
+const WEATHER_TTL = 600; // 10 minutes
 const FLIGHT_TTL = 30; // 30 seconds for flight data
 
 // Rate limiting: track last fetch times
