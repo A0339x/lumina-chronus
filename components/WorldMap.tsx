@@ -262,62 +262,78 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const dragStartRef = useRef<{ x: number; y: number; centerLng: number; centerLat: number } | null>(null);
   const zoomRef = useRef(1);
   const centerRef = useRef<[number, number]>([0, 20]);
+  const targetZoomRef = useRef(1);
+  const targetCenterRef = useRef<[number, number]>([0, 20]);
   const animationRef = useRef<number | null>(null);
+  const isDraggingRef = useRef(false);
 
-  // Smooth zoom/pan animation - updates refs synchronously for canvas sync
+  // Keep target refs in sync
   useEffect(() => {
+    targetZoomRef.current = targetZoom;
+  }, [targetZoom]);
+
+  useEffect(() => {
+    targetCenterRef.current = targetCenter;
+  }, [targetCenter]);
+
+  // Smooth zoom/pan animation - uses refs to always read latest values
+  useEffect(() => {
+    let isRunning = true;
+
     const animate = () => {
-      const LERP_FACTOR = 0.35; // Snappier animation (0.1 = slow, 0.5 = fast)
+      if (!isRunning) return;
 
-      let needsUpdate = false;
-
-      // Animate zoom - update ref synchronously
-      const zoomDiff = targetZoom - zoomRef.current;
-      if (Math.abs(zoomDiff) > 0.001) {
-        const newZoom = zoomRef.current + zoomDiff * LERP_FACTOR;
-        zoomRef.current = newZoom; // Update ref immediately for canvas
-        setZoom(newZoom);
-        needsUpdate = true;
-      } else if (zoomRef.current !== targetZoom) {
-        zoomRef.current = targetZoom;
-        setZoom(targetZoom);
+      // Skip animation during drag - direct updates only
+      if (isDraggingRef.current) {
+        animationRef.current = requestAnimationFrame(animate);
+        return;
       }
 
-      // Animate center - update ref synchronously
-      const centerLngDiff = targetCenter[0] - centerRef.current[0];
-      const centerLatDiff = targetCenter[1] - centerRef.current[1];
+      const LERP_FACTOR = 0.35; // Snappier animation (0.1 = slow, 0.5 = fast)
+      let needsUpdate = false;
+
+      // Animate zoom - read from refs for latest values
+      const zoomDiff = targetZoomRef.current - zoomRef.current;
+      if (Math.abs(zoomDiff) > 0.001) {
+        const newZoom = zoomRef.current + zoomDiff * LERP_FACTOR;
+        zoomRef.current = newZoom;
+        setZoom(newZoom);
+        needsUpdate = true;
+      } else if (zoomRef.current !== targetZoomRef.current) {
+        zoomRef.current = targetZoomRef.current;
+        setZoom(targetZoomRef.current);
+      }
+
+      // Animate center - read from refs for latest values
+      const centerLngDiff = targetCenterRef.current[0] - centerRef.current[0];
+      const centerLatDiff = targetCenterRef.current[1] - centerRef.current[1];
       if (Math.abs(centerLngDiff) > 0.001 || Math.abs(centerLatDiff) > 0.001) {
         const newCenter: [number, number] = [
           centerRef.current[0] + centerLngDiff * LERP_FACTOR,
           centerRef.current[1] + centerLatDiff * LERP_FACTOR
         ];
-        centerRef.current = newCenter; // Update ref immediately for canvas
+        centerRef.current = newCenter;
         setCenter(newCenter);
         needsUpdate = true;
-      } else if (centerRef.current[0] !== targetCenter[0] || centerRef.current[1] !== targetCenter[1]) {
-        centerRef.current = targetCenter;
-        setCenter(targetCenter);
+      } else if (centerRef.current[0] !== targetCenterRef.current[0] || centerRef.current[1] !== targetCenterRef.current[1]) {
+        centerRef.current = [...targetCenterRef.current];
+        setCenter([...targetCenterRef.current]);
       }
 
-      if (needsUpdate) {
-        animationRef.current = requestAnimationFrame(animate);
-      } else {
-        animationRef.current = null;
-      }
+      // Keep animation running for responsive feel
+      animationRef.current = requestAnimationFrame(animate);
     };
 
-    // Start animation if not already running
-    if (animationRef.current === null) {
-      animationRef.current = requestAnimationFrame(animate);
-    }
+    animationRef.current = requestAnimationFrame(animate);
 
     return () => {
+      isRunning = false;
       if (animationRef.current !== null) {
         cancelAnimationFrame(animationRef.current);
         animationRef.current = null;
       }
     };
-  }, [targetZoom, targetCenter]);
+  }, []); // No dependencies - runs once, reads from refs
 
   // Zoom constraints
   const MIN_ZOOM = 1;
@@ -511,26 +527,28 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
   // Start drag for panning
   const handleDragStart = useCallback((event: React.MouseEvent) => {
-    if (targetZoom <= 1) return; // No panning at default zoom
+    if (targetZoomRef.current <= 1) return; // No panning at default zoom
     setIsDragging(true);
+    isDraggingRef.current = true;
     dragStartRef.current = {
       x: event.clientX,
       y: event.clientY,
-      centerLng: targetCenter[0],
-      centerLat: targetCenter[1]
+      centerLng: centerRef.current[0],
+      centerLat: centerRef.current[1]
     };
-  }, [targetZoom, targetCenter]);
+  }, []);
 
   // Pan while dragging - direct update for responsive feel
   const handleDrag = useCallback((event: React.MouseEvent) => {
-    if (!isDragging || !dragStartRef.current || !mapContainerRef.current) return;
+    if (!isDraggingRef.current || !dragStartRef.current || !mapContainerRef.current) return;
 
     const rect = mapContainerRef.current.getBoundingClientRect();
     const dx = event.clientX - dragStartRef.current.x;
     const dy = event.clientY - dragStartRef.current.y;
 
     // Convert pixel movement to degrees (adjusted for zoom)
-    const pixelsPerDegree = (BASE_SCALE * targetZoom) * (Math.PI / 180) * (rect.width / SVG_WIDTH);
+    // Use zoomRef for consistent calculation with canvas
+    const pixelsPerDegree = (BASE_SCALE * zoomRef.current) * (Math.PI / 180) * (rect.width / SVG_WIDTH);
     const dLng = -dx / pixelsPerDegree;
     const dLat = dy / pixelsPerDegree;
 
@@ -545,15 +563,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     if (newLng > 180) newLng -= 360;
     if (newLng < -180) newLng += 360;
 
-    // Direct update for dragging (responsive) - update ref first for canvas sync
-    centerRef.current = [newLng, newLat];
-    setCenter([newLng, newLat]);
-    setTargetCenter([newLng, newLat]);
-  }, [isDragging, targetZoom]);
+    // Direct update for dragging - update all refs and state together
+    const newCenter: [number, number] = [newLng, newLat];
+    centerRef.current = newCenter;
+    targetCenterRef.current = newCenter;
+    setCenter(newCenter);
+    setTargetCenter(newCenter);
+  }, []);
 
   // End drag
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
+    isDraggingRef.current = false;
     dragStartRef.current = null;
   }, []);
 
