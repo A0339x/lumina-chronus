@@ -253,13 +253,65 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const issCanvasPosRef = useRef<{ x: number; y: number } | null>(null);
   const flightProgressRef = useRef(0);
 
-  // Zoom and pan state
-  const [zoom, setZoom] = useState(1);
+  // Zoom and pan state - using animated values for smooth transitions
+  const [zoom, setZoom] = useState(1);           // Current animated zoom
+  const [targetZoom, setTargetZoom] = useState(1); // Target zoom to animate toward
   const [center, setCenter] = useState<[number, number]>([0, 20]); // [lng, lat]
+  const [targetCenter, setTargetCenter] = useState<[number, number]>([0, 20]);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef<{ x: number; y: number; centerLng: number; centerLat: number } | null>(null);
   const zoomRef = useRef(1);
   const centerRef = useRef<[number, number]>([0, 20]);
+  const animationRef = useRef<number | null>(null);
+
+  // Smooth zoom/pan animation
+  useEffect(() => {
+    const animate = () => {
+      const LERP_FACTOR = 0.15; // Smoothness (0.1 = smoother, 0.3 = snappier)
+
+      let needsUpdate = false;
+
+      // Animate zoom
+      const zoomDiff = targetZoom - zoom;
+      if (Math.abs(zoomDiff) > 0.001) {
+        setZoom(prev => prev + zoomDiff * LERP_FACTOR);
+        needsUpdate = true;
+      } else if (zoom !== targetZoom) {
+        setZoom(targetZoom);
+      }
+
+      // Animate center
+      const centerLngDiff = targetCenter[0] - center[0];
+      const centerLatDiff = targetCenter[1] - center[1];
+      if (Math.abs(centerLngDiff) > 0.01 || Math.abs(centerLatDiff) > 0.01) {
+        setCenter([
+          center[0] + centerLngDiff * LERP_FACTOR,
+          center[1] + centerLatDiff * LERP_FACTOR
+        ]);
+        needsUpdate = true;
+      } else if (center[0] !== targetCenter[0] || center[1] !== targetCenter[1]) {
+        setCenter(targetCenter);
+      }
+
+      if (needsUpdate) {
+        animationRef.current = requestAnimationFrame(animate);
+      } else {
+        animationRef.current = null;
+      }
+    };
+
+    // Start animation if not already running
+    if (animationRef.current === null) {
+      animationRef.current = requestAnimationFrame(animate);
+    }
+
+    return () => {
+      if (animationRef.current !== null) {
+        cancelAnimationFrame(animationRef.current);
+        animationRef.current = null;
+      }
+    };
+  }, [targetZoom, targetCenter, zoom, center]);
 
   // Keep refs in sync for canvas rendering
   useEffect(() => {
@@ -447,11 +499,11 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     }
   }, [currentCountry, hoverInfo]);
 
-  // Zoom with mouse wheel
+  // Zoom with mouse wheel - smooth animated zoom
   const handleWheel = useCallback((event: React.WheelEvent) => {
     event.preventDefault();
-    const delta = event.deltaY > 0 ? -0.15 : 0.15;
-    setZoom(prev => {
+    const delta = event.deltaY > 0 ? -0.25 : 0.25; // Slightly larger steps for wheel
+    setTargetZoom(prev => {
       const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta * prev));
       return newZoom;
     });
@@ -459,17 +511,17 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
   // Start drag for panning
   const handleDragStart = useCallback((event: React.MouseEvent) => {
-    if (zoom <= 1) return; // No panning at default zoom
+    if (targetZoom <= 1) return; // No panning at default zoom
     setIsDragging(true);
     dragStartRef.current = {
       x: event.clientX,
       y: event.clientY,
-      centerLng: center[0],
-      centerLat: center[1]
+      centerLng: targetCenter[0],
+      centerLat: targetCenter[1]
     };
-  }, [zoom, center]);
+  }, [targetZoom, targetCenter]);
 
-  // Pan while dragging
+  // Pan while dragging - direct update for responsive feel
   const handleDrag = useCallback((event: React.MouseEvent) => {
     if (!isDragging || !dragStartRef.current || !mapContainerRef.current) return;
 
@@ -478,7 +530,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     const dy = event.clientY - dragStartRef.current.y;
 
     // Convert pixel movement to degrees (adjusted for zoom)
-    const pixelsPerDegree = (BASE_SCALE * zoom) * (Math.PI / 180) * (rect.width / SVG_WIDTH);
+    const pixelsPerDegree = (BASE_SCALE * targetZoom) * (Math.PI / 180) * (rect.width / SVG_WIDTH);
     const dLng = -dx / pixelsPerDegree;
     const dLat = dy / pixelsPerDegree;
 
@@ -493,8 +545,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     if (newLng > 180) newLng -= 360;
     if (newLng < -180) newLng += 360;
 
+    // Direct update for dragging (responsive)
     setCenter([newLng, newLat]);
-  }, [isDragging, zoom]);
+    setTargetCenter([newLng, newLat]);
+  }, [isDragging, targetZoom]);
 
   // End drag
   const handleDragEnd = useCallback(() => {
@@ -502,25 +556,25 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     dragStartRef.current = null;
   }, []);
 
-  // Zoom controls
+  // Zoom controls - smooth animated zoom
   const handleZoomIn = useCallback(() => {
-    setZoom(prev => Math.min(MAX_ZOOM, prev * 1.5));
+    setTargetZoom(prev => Math.min(MAX_ZOOM, prev * 1.5));
   }, []);
 
   const handleZoomOut = useCallback(() => {
-    setZoom(prev => {
+    setTargetZoom(prev => {
       const newZoom = Math.max(MIN_ZOOM, prev / 1.5);
       // Reset center when zooming back to 1x
       if (newZoom <= 1) {
-        setCenter([0, 20]);
+        setTargetCenter([0, 20]);
       }
       return newZoom;
     });
   }, []);
 
   const handleResetView = useCallback(() => {
-    setZoom(1);
-    setCenter([0, 20]);
+    setTargetZoom(1);
+    setTargetCenter([0, 20]);
   }, []);
 
   // Fetch METAR weather data on mount
@@ -804,7 +858,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     };
 
     class Particle {
-      x: number;
+      lat: number;  // Store geographic coordinates
+      lng: number;
+      x: number;    // Canvas coordinates (recalculated each frame)
       y: number;
       color: string;
       size: number;
@@ -821,9 +877,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       weatherConditions: WeatherCondition[]; // Now supports multiple conditions
       weatherRingPhases: number[]; // Separate phase for each condition
 
-      constructor(x: number, y: number, color: string, isCelebration: boolean = false, celebrationIntensity: number = 0, weatherConditions: WeatherCondition[] = []) {
-        this.x = x;
-        this.y = y;
+      constructor(lat: number, lng: number, color: string, isCelebration: boolean = false, celebrationIntensity: number = 0, weatherConditions: WeatherCondition[] = []) {
+        this.lat = lat;
+        this.lng = lng;
+        // Initialize canvas position (will be updated each frame)
+        const pos = latLngToCanvas(lat, lng);
+        this.x = pos.x;
+        this.y = pos.y;
         this.color = color;
         this.isCelebration = isCelebration;
         this.weatherConditions = weatherConditions;
@@ -931,8 +991,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         ctx.restore();
       }
 
+      // Update canvas position based on current zoom/center
+      updatePosition() {
+        const pos = latLngToCanvas(this.lat, this.lng);
+        this.x = pos.x;
+        this.y = pos.y;
+      }
+
       update(): boolean {
         this.life++;
+
+        // Update position for zoom/pan changes
+        this.updatePosition();
 
         // Animate weather ring expansion for all conditions
         if (this.weatherConditions.length > 0) {
@@ -1001,10 +1071,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         // After all celebrated: ensure ALL airports have a sparkle
         airports.forEach((airport, index) => {
           if (!airportHasSparkle.has(index)) {
-            const { x, y } = latLngToCanvas(airport.lat, airport.lng);
             const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
             const conditions = getAirportConditions(airport.icao);
-            const particle = new Particle(x, y, sparkleColor, false, 0, conditions);
+            const particle = new Particle(airport.lat, airport.lng, sparkleColor, false, 0, conditions);
             (particle as any).airportIndex = index;
             // Stagger the start so they don't all twinkle in sync
             particle.life = Math.floor(Math.random() * particle.maxLife * 0.8);
@@ -1022,10 +1091,9 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
           if (isInPastTimezone && !airportHasSparkle.has(index)) {
             const isCelebrating = celebratingOffset !== null && currentIntensity > 0 &&
               Math.abs(approxOffset - celebratingOffset) <= 1;
-            const { x, y } = latLngToCanvas(airport.lat, airport.lng);
             const sparkleColor = getTemperatureColor(airport.lat, airport.lng);
             const conditions = getAirportConditions(airport.icao);
-            const particle = new Particle(x, y, sparkleColor, isCelebrating, currentIntensity, conditions);
+            const particle = new Particle(airport.lat, airport.lng, sparkleColor, isCelebrating, currentIntensity, conditions);
             (particle as any).airportIndex = index;
             // Stagger the start so they don't all twinkle in sync
             particle.life = Math.floor(Math.random() * particle.maxLife * 0.8);
@@ -1314,7 +1382,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       {/* Vector World Map */}
       <div
         ref={mapContainerRef}
-        className={`absolute inset-0 w-full h-full ${isDragging ? 'cursor-grabbing' : zoom > 1 ? 'cursor-grab' : ''}`}
+        className={`absolute inset-0 w-full h-full ${isDragging ? 'cursor-grabbing' : targetZoom > 1 ? 'cursor-grab' : ''}`}
         onMouseMove={(e) => {
           handleMouseMove(e);
           handleDrag(e);
@@ -1375,7 +1443,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       <div className="absolute bottom-4 right-4 z-40 flex flex-col gap-1">
         <button
           onClick={handleZoomIn}
-          disabled={zoom >= MAX_ZOOM}
+          disabled={targetZoom >= MAX_ZOOM}
           className="p-2 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-white/70 hover:text-white hover:bg-slate-800/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           title="Zoom in"
         >
@@ -1383,13 +1451,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         </button>
         <button
           onClick={handleZoomOut}
-          disabled={zoom <= MIN_ZOOM}
+          disabled={targetZoom <= MIN_ZOOM}
           className="p-2 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-white/70 hover:text-white hover:bg-slate-800/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
           title="Zoom out"
         >
           <ZoomOut size={16} />
         </button>
-        {zoom > 1 && (
+        {targetZoom > 1 && (
           <button
             onClick={handleResetView}
             className="p-2 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-white/70 hover:text-white hover:bg-slate-800/80 transition-all"
@@ -1398,7 +1466,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             <Maximize2 size={16} />
           </button>
         )}
-        {zoom > 1 && (
+        {targetZoom > 1 && (
           <div className="px-2 py-1 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-center">
             <span className="text-[10px] text-white/50">{zoom.toFixed(1)}x</span>
           </div>
