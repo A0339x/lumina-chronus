@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, memo, useState, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
+import { ZoomIn, ZoomOut, Maximize2 } from 'lucide-react';
 import { FireworkEvent, TimezoneData } from '../types';
 import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportConditions, WeatherCondition, WeatherIntensity } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
@@ -175,7 +176,9 @@ const screenToLatLng = (
   screenX: number,
   screenY: number,
   containerWidth: number,
-  containerHeight: number
+  containerHeight: number,
+  zoomLevel: number = 1,
+  mapCenter: [number, number] = [MAP_CENTER_LNG, MAP_CENTER_LAT]
 ): { lat: number; lng: number } => {
   // SVG preserves aspect ratio (xMidYMid meet) - calculate actual rendered size
   const containerAspect = containerWidth / containerHeight;
@@ -200,15 +203,16 @@ const screenToLatLng = (
 
   // For d3 geoEquirectangular projection:
   // scale = pixels per radian, so pixels per degree = scale * (π/180)
-  const pixelsPerDegree = MAP_SCALE * (Math.PI / 180);
+  // Multiply by zoom level for zoomed projection
+  const pixelsPerDegree = (MAP_SCALE * zoomLevel) * (Math.PI / 180);
 
-  // SVG center corresponds to map center [0, 20]
+  // SVG center corresponds to map center
   const svgCenterX = SVG_WIDTH / 2;
   const svgCenterY = SVG_HEIGHT / 2;
 
-  // Convert SVG coords to lat/lng
-  const lng = MAP_CENTER_LNG + (svgX - svgCenterX) / pixelsPerDegree;
-  const lat = MAP_CENTER_LAT - (svgY - svgCenterY) / pixelsPerDegree;
+  // Convert SVG coords to lat/lng using current map center
+  const lng = mapCenter[0] + (svgX - svgCenterX) / pixelsPerDegree;
+  const lat = mapCenter[1] - (svgY - svgCenterY) / pixelsPerDegree;
 
   return { lat, lng };
 };
@@ -248,6 +252,25 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const issPositionRef = useRef<ISSPosition | null>(null);
   const issCanvasPosRef = useRef<{ x: number; y: number } | null>(null);
   const flightProgressRef = useRef(0);
+
+  // Zoom and pan state
+  const [zoom, setZoom] = useState(1);
+  const [center, setCenter] = useState<[number, number]>([0, 20]); // [lng, lat]
+  const [isDragging, setIsDragging] = useState(false);
+  const dragStartRef = useRef<{ x: number; y: number; centerLng: number; centerLat: number } | null>(null);
+  const zoomRef = useRef(1);
+  const centerRef = useRef<[number, number]>([0, 20]);
+
+  // Keep refs in sync for canvas rendering
+  useEffect(() => {
+    zoomRef.current = zoom;
+    centerRef.current = center;
+  }, [zoom, center]);
+
+  // Zoom constraints
+  const MIN_ZOOM = 1;
+  const MAX_ZOOM = 6;
+  const BASE_SCALE = 220;
   const planePositionsRef = useRef<Map<string, { x: number; y: number; bearing: number }>>(new Map());
   const hoveredFlightRef = useRef<string | null>(null);
   const liveFlightsRef = useRef<Map<string, FlightInfo>>(new Map());
@@ -301,7 +324,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         const rect = mapContainerRef.current.getBoundingClientRect();
         const localX = event.clientX - rect.left;
         const localY = event.clientY - rect.top;
-        const { lat, lng } = screenToLatLng(localX, localY, rect.width, rect.height);
+        const { lat, lng } = screenToLatLng(localX, localY, rect.width, rect.height, zoomRef.current, centerRef.current);
         const airportInfo = getNearestAirportInfo(lat, lng);
 
         setHoverInfo({
@@ -389,7 +412,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       setFlightHoverInfo(null);
     }
 
-    const { lat, lng } = screenToLatLng(localX, localY, rect.width, rect.height);
+    const { lat, lng } = screenToLatLng(localX, localY, rect.width, rect.height, zoomRef.current, centerRef.current);
     const airportInfo = getNearestAirportInfo(lat, lng);
 
     if (currentCountry) {
@@ -423,6 +446,82 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       }, 200);
     }
   }, [currentCountry, hoverInfo]);
+
+  // Zoom with mouse wheel
+  const handleWheel = useCallback((event: React.WheelEvent) => {
+    event.preventDefault();
+    const delta = event.deltaY > 0 ? -0.15 : 0.15;
+    setZoom(prev => {
+      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta * prev));
+      return newZoom;
+    });
+  }, []);
+
+  // Start drag for panning
+  const handleDragStart = useCallback((event: React.MouseEvent) => {
+    if (zoom <= 1) return; // No panning at default zoom
+    setIsDragging(true);
+    dragStartRef.current = {
+      x: event.clientX,
+      y: event.clientY,
+      centerLng: center[0],
+      centerLat: center[1]
+    };
+  }, [zoom, center]);
+
+  // Pan while dragging
+  const handleDrag = useCallback((event: React.MouseEvent) => {
+    if (!isDragging || !dragStartRef.current || !mapContainerRef.current) return;
+
+    const rect = mapContainerRef.current.getBoundingClientRect();
+    const dx = event.clientX - dragStartRef.current.x;
+    const dy = event.clientY - dragStartRef.current.y;
+
+    // Convert pixel movement to degrees (adjusted for zoom)
+    const pixelsPerDegree = (BASE_SCALE * zoom) * (Math.PI / 180) * (rect.width / SVG_WIDTH);
+    const dLng = -dx / pixelsPerDegree;
+    const dLat = dy / pixelsPerDegree;
+
+    // Calculate new center with bounds
+    let newLng = dragStartRef.current.centerLng + dLng;
+    let newLat = dragStartRef.current.centerLat + dLat;
+
+    // Clamp latitude
+    newLat = Math.max(-60, Math.min(80, newLat));
+
+    // Wrap longitude
+    if (newLng > 180) newLng -= 360;
+    if (newLng < -180) newLng += 360;
+
+    setCenter([newLng, newLat]);
+  }, [isDragging, zoom]);
+
+  // End drag
+  const handleDragEnd = useCallback(() => {
+    setIsDragging(false);
+    dragStartRef.current = null;
+  }, []);
+
+  // Zoom controls
+  const handleZoomIn = useCallback(() => {
+    setZoom(prev => Math.min(MAX_ZOOM, prev * 1.5));
+  }, []);
+
+  const handleZoomOut = useCallback(() => {
+    setZoom(prev => {
+      const newZoom = Math.max(MIN_ZOOM, prev / 1.5);
+      // Reset center when zooming back to 1x
+      if (newZoom <= 1) {
+        setCenter([0, 20]);
+      }
+      return newZoom;
+    });
+  }, []);
+
+  const handleResetView = useCallback(() => {
+    setZoom(1);
+    setCenter([0, 20]);
+  }, []);
 
   // Fetch METAR weather data on mount
   useEffect(() => {
@@ -674,11 +773,14 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     // Convert lat/lng to canvas coordinates matching the map's projection
     const latLngToCanvas = (lat: number, lng: number): { x: number; y: number } => {
       // Match the map's d3 geoEquirectangular projection
-      const pixelsPerDegree = MAP_SCALE * (Math.PI / 180);
+      // Use current zoom level and center from refs
+      const currentZoom = zoomRef.current;
+      const currentCenter = centerRef.current;
+      const pixelsPerDegree = (MAP_SCALE * currentZoom) * (Math.PI / 180);
 
-      // Convert to SVG coordinates (800x600 with center at [0, 20])
-      const svgX = (SVG_WIDTH / 2) + (lng - MAP_CENTER_LNG) * pixelsPerDegree;
-      const svgY = (SVG_HEIGHT / 2) - (lat - MAP_CENTER_LAT) * pixelsPerDegree;
+      // Convert to SVG coordinates using current center
+      const svgX = (SVG_WIDTH / 2) + (lng - currentCenter[0]) * pixelsPerDegree;
+      const svgY = (SVG_HEIGHT / 2) - (lat - currentCenter[1]) * pixelsPerDegree;
 
       // Convert SVG coords to canvas coords (accounting for aspect ratio)
       const containerAspect = canvas.width / canvas.height;
@@ -1180,8 +1282,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
-            scale: 220,
-            center: [0, 20]
+            scale: BASE_SCALE * zoom,
+            center: center
           }}
           style={{
             width: '100%',
@@ -1212,15 +1314,24 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       {/* Vector World Map */}
       <div
         ref={mapContainerRef}
-        className="absolute inset-0 w-full h-full"
-        onMouseMove={handleMouseMove}
-        onMouseLeave={handleCountryLeave}
+        className={`absolute inset-0 w-full h-full ${isDragging ? 'cursor-grabbing' : zoom > 1 ? 'cursor-grab' : ''}`}
+        onMouseMove={(e) => {
+          handleMouseMove(e);
+          handleDrag(e);
+        }}
+        onMouseDown={handleDragStart}
+        onMouseUp={handleDragEnd}
+        onMouseLeave={(e) => {
+          handleCountryLeave();
+          handleDragEnd();
+        }}
+        onWheel={handleWheel}
       >
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
-            scale: 220,
-            center: [0, 20]
+            scale: BASE_SCALE * zoom,
+            center: center
           }}
           style={{
             width: '100%',
@@ -1259,6 +1370,40 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         ref={canvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
       />
+
+      {/* Zoom Controls */}
+      <div className="absolute bottom-4 right-4 z-40 flex flex-col gap-1">
+        <button
+          onClick={handleZoomIn}
+          disabled={zoom >= MAX_ZOOM}
+          className="p-2 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-white/70 hover:text-white hover:bg-slate-800/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          title="Zoom in"
+        >
+          <ZoomIn size={16} />
+        </button>
+        <button
+          onClick={handleZoomOut}
+          disabled={zoom <= MIN_ZOOM}
+          className="p-2 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-white/70 hover:text-white hover:bg-slate-800/80 disabled:opacity-30 disabled:cursor-not-allowed transition-all"
+          title="Zoom out"
+        >
+          <ZoomOut size={16} />
+        </button>
+        {zoom > 1 && (
+          <button
+            onClick={handleResetView}
+            className="p-2 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-white/70 hover:text-white hover:bg-slate-800/80 transition-all"
+            title="Reset view"
+          >
+            <Maximize2 size={16} />
+          </button>
+        )}
+        {zoom > 1 && (
+          <div className="px-2 py-1 bg-slate-900/80 backdrop-blur-sm border border-white/10 rounded-lg text-center">
+            <span className="text-[10px] text-white/50">{zoom.toFixed(1)}x</span>
+          </div>
+        )}
+      </div>
 
       {/* Hover Tooltip */}
       <div
