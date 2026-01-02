@@ -65,21 +65,18 @@ export async function fetchISSPosition(): Promise<ISSPosition | null> {
       timestamp: data.timestamp * 1000,
     };
 
-    const timeSinceLastFetch = now - prevFetchTime;
     lastFetchTime = now;
 
-    // Initialize on first fetch OR if we've been away too long (tab backgrounded)
-    if (!hasInitialized || timeSinceLastFetch > 10000) {
+    // Initialize on first fetch
+    if (!hasInitialized) {
       renderedLat = currentPosition.lat;
       renderedLng = currentPosition.lng;
       lastRenderTime = now;
-      velocityLat = 0;
-      velocityLng = 0;
       hasInitialized = true;
     } else if (prevPosition) {
       // Calculate new velocity from the difference between API positions
-      const timeDiff = timeSinceLastFetch;
-      if (timeDiff > 0 && timeDiff < 10000) {
+      const timeDiff = now - prevFetchTime;
+      if (timeDiff > 0) {
         velocityLat = (currentPosition.lat - prevPosition.lat) / timeDiff;
 
         // Handle longitude wrapping
