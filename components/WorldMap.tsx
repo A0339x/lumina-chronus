@@ -1406,7 +1406,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       {/* Vector World Map */}
       <div
         ref={mapContainerRef}
-        className={`absolute inset-0 w-full h-full overflow-hidden ${isDragging ? 'cursor-grabbing' : targetZoom > 1 ? 'cursor-grab' : ''}`}
+        className={`absolute inset-0 w-full h-full ${isDragging ? 'cursor-grabbing' : targetZoom > 1 ? 'cursor-grab' : ''}`}
         onMouseMove={(e) => {
           handleMouseMove(e);
           handleDrag(e);
@@ -1463,12 +1463,6 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
         ref={canvasRef}
         className="absolute inset-0 w-full h-full pointer-events-none"
       />
-
-      {/* Edge fade gradients to blend map into background */}
-      <div className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-[#050510] to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-x-0 bottom-0 h-24 bg-gradient-to-t from-[#050510] to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-y-0 left-0 w-24 bg-gradient-to-r from-[#050510] to-transparent pointer-events-none z-10" />
-      <div className="absolute inset-y-0 right-0 w-24 bg-gradient-to-l from-[#050510] to-transparent pointer-events-none z-10" />
 
       {/* Zoom Controls */}
       <div className="absolute bottom-4 right-4 z-40 flex flex-col gap-1">
