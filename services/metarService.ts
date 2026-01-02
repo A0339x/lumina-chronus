@@ -625,9 +625,9 @@ async function refreshWeatherCache(): Promise<void> {
         console.error(`Weather batch ${i} error:`, batchError);
       }
 
-      // Small delay between batches to be nice to the API
+      // Delay between batches to avoid rate limits (600 calls/min on free tier)
       if (i + 100 < AIRPORTS.length) {
-        await new Promise(r => setTimeout(r, 100));
+        await new Promise(r => setTimeout(r, 1500));
       }
     }
 
