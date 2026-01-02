@@ -1370,7 +1370,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       <canvas ref={maskCanvasRef} className="hidden" />
 
       {/* Hidden map for land mask detection */}
-      <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none" aria-hidden="true">
+      <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <ComposableMap
           projection="geoEquirectangular"
           projectionConfig={{
@@ -1378,8 +1378,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             center: center
           }}
           style={{
-            width: '100%',
-            height: '100%',
+            width: `${100 + (zoom - 1) * 50}%`,
+            height: `${100 + (zoom - 1) * 50}%`,
+            marginLeft: `${-(zoom - 1) * 25}%`,
+            marginTop: `${-(zoom - 1) * 25}%`,
           }}
         >
           <Geographies geography={geoUrl}>
@@ -1406,7 +1408,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       {/* Vector World Map */}
       <div
         ref={mapContainerRef}
-        className={`absolute inset-0 w-full h-full ${isDragging ? 'cursor-grabbing' : targetZoom > 1 ? 'cursor-grab' : ''}`}
+        className={`absolute inset-0 w-full h-full overflow-hidden ${isDragging ? 'cursor-grabbing' : targetZoom > 1 ? 'cursor-grab' : ''}`}
         onMouseMove={(e) => {
           handleMouseMove(e);
           handleDrag(e);
@@ -1426,8 +1428,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             center: center
           }}
           style={{
-            width: '100%',
-            height: '100%',
+            width: `${100 + (zoom - 1) * 50}%`,
+            height: `${100 + (zoom - 1) * 50}%`,
+            marginLeft: `${-(zoom - 1) * 25}%`,
+            marginTop: `${-(zoom - 1) * 25}%`,
             background: 'transparent',
           }}
         >
