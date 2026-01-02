@@ -1378,10 +1378,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             center: center
           }}
           style={{
-            width: `${100 + (zoom - 1) * 50}%`,
-            height: `${100 + (zoom - 1) * 50}%`,
-            marginLeft: `${-(zoom - 1) * 25}%`,
-            marginTop: `${-(zoom - 1) * 25}%`,
+            width: `${100 + zoom * 100}%`,
+            height: `${100 + zoom * 100}%`,
+            marginLeft: `${-zoom * 50}%`,
+            marginTop: `${-zoom * 50}%`,
           }}
         >
           <Geographies geography={geoUrl}>
@@ -1428,10 +1428,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
             center: center
           }}
           style={{
-            width: `${100 + (zoom - 1) * 50}%`,
-            height: `${100 + (zoom - 1) * 50}%`,
-            marginLeft: `${-(zoom - 1) * 25}%`,
-            marginTop: `${-(zoom - 1) * 25}%`,
+            width: `${100 + zoom * 100}%`,
+            height: `${100 + zoom * 100}%`,
+            marginLeft: `${-zoom * 50}%`,
+            marginTop: `${-zoom * 50}%`,
             background: 'transparent',
           }}
         >
