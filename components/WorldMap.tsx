@@ -1362,7 +1362,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       window.removeEventListener('resize', handleResize);
       cancelAnimationFrame(animationFrameId);
     };
-  }, [landMask, metarReady]); // Using refs for activeFireworks, pastTimezones, allCelebrated to avoid restarting animation
+  }, [landMask, metarReady, isFullscreen]); // isFullscreen triggers canvas resize when toggled
 
   return (
     <div ref={containerRef} className="relative w-full h-full">
