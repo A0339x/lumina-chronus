@@ -523,6 +523,10 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     const delta = event.deltaY > 0 ? -0.25 : 0.25; // Slightly larger steps for wheel
     setTargetZoom(prev => {
       const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta * prev));
+      // Reset center when zooming back to 1x
+      if (newZoom <= 1) {
+        setTargetCenter([0, 20]);
+      }
       return newZoom;
     });
   }, []);
