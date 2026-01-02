@@ -1,6 +1,6 @@
 // ISS (International Space Station) tracking service
 // Uses the "Where The ISS At?" API for real-time position data
-// Smoothly interpolates between API positions for animation
+// Smoothly animates at constant velocity between API updates
 
 export interface ISSPosition {
   lat: number;
@@ -17,51 +17,20 @@ let lastFetchTime = 0;
 let hasInitialized = false;
 const CACHE_DURATION = 5000; // 5 seconds between API calls
 
-// For smooth movement: track position history
-let positionHistory: Array<{ lat: number; lng: number; time: number }> = [];
-const MAX_HISTORY = 3;
+// Velocity (degrees per millisecond) - updated when we get new API data
+let velocityLat = 0;
+let velocityLng = 0;
 
-// Rendered position (what we actually display)
+// Rendered position (what we actually display) - moves at constant velocity
 let renderedLat = 0;
 let renderedLng = 0;
 let lastRenderTime = 0;
 
-// Lerp helper
-function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * t;
-}
-
-// Handle longitude wrapping for smooth interpolation across the dateline
-function lerpLongitude(a: number, b: number, t: number): number {
-  let diff = b - a;
-  if (diff > 180) diff -= 360;
-  if (diff < -180) diff += 360;
-  let result = a + diff * t;
-  if (result > 180) result -= 360;
-  if (result < -180) result += 360;
-  return result;
-}
-
-// Calculate velocity (degrees per ms) from position history
-function calculateVelocity(): { latPerMs: number; lngPerMs: number } {
-  if (positionHistory.length < 2) {
-    return { latPerMs: 0, lngPerMs: 0 };
-  }
-
-  const recent = positionHistory[positionHistory.length - 1];
-  const older = positionHistory[positionHistory.length - 2];
-  const timeDiff = recent.time - older.time;
-
-  if (timeDiff <= 0) return { latPerMs: 0, lngPerMs: 0 };
-
-  let lngDiff = recent.lng - older.lng;
-  if (lngDiff > 180) lngDiff -= 360;
-  if (lngDiff < -180) lngDiff += 360;
-
-  return {
-    latPerMs: (recent.lat - older.lat) / timeDiff,
-    lngPerMs: lngDiff / timeDiff
-  };
+// Normalize longitude to -180 to 180
+function normalizeLng(lng: number): number {
+  while (lng > 180) lng -= 360;
+  while (lng < -180) lng += 360;
+  return lng;
 }
 
 export async function fetchISSPosition(): Promise<ISSPosition | null> {
@@ -84,6 +53,9 @@ export async function fetchISSPosition(): Promise<ISSPosition | null> {
 
     const data = await response.json();
 
+    const prevPosition = currentPosition;
+    const prevFetchTime = lastFetchTime;
+
     currentPosition = {
       lat: data.latitude,
       lng: data.longitude,
@@ -93,26 +65,37 @@ export async function fetchISSPosition(): Promise<ISSPosition | null> {
       timestamp: data.timestamp * 1000,
     };
 
-    // Add to position history
-    positionHistory.push({
-      lat: currentPosition.lat,
-      lng: currentPosition.lng,
-      time: now
-    });
-
-    // Keep history bounded
-    if (positionHistory.length > MAX_HISTORY) {
-      positionHistory.shift();
-    }
-
     lastFetchTime = now;
 
-    // Initialize rendered position on first fetch
+    // Initialize on first fetch
     if (!hasInitialized) {
       renderedLat = currentPosition.lat;
       renderedLng = currentPosition.lng;
       lastRenderTime = now;
       hasInitialized = true;
+    } else if (prevPosition) {
+      // Calculate new velocity from the difference between API positions
+      const timeDiff = now - prevFetchTime;
+      if (timeDiff > 0) {
+        velocityLat = (currentPosition.lat - prevPosition.lat) / timeDiff;
+
+        // Handle longitude wrapping
+        let lngDiff = currentPosition.lng - prevPosition.lng;
+        if (lngDiff > 180) lngDiff -= 360;
+        if (lngDiff < -180) lngDiff += 360;
+        velocityLng = lngDiff / timeDiff;
+      }
+
+      // Smoothly correct any drift: nudge rendered position slightly toward actual
+      // This prevents accumulating error over time without causing jumps
+      const errorLat = currentPosition.lat - renderedLat;
+      let errorLng = currentPosition.lng - renderedLng;
+      if (errorLng > 180) errorLng -= 360;
+      if (errorLng < -180) errorLng += 360;
+
+      // Apply small correction (10% of error)
+      renderedLat += errorLat * 0.1;
+      renderedLng = normalizeLng(renderedLng + errorLng * 0.1);
     }
 
     return currentPosition;
@@ -122,7 +105,7 @@ export async function fetchISSPosition(): Promise<ISSPosition | null> {
   }
 }
 
-// Get smoothly interpolated position for animation
+// Get smoothly animated position
 export function getInterpolatedISSPosition(): ISSPosition | null {
   if (!currentPosition || !hasInitialized) return null;
 
@@ -130,24 +113,12 @@ export function getInterpolatedISSPosition(): ISSPosition | null {
   const deltaTime = now - lastRenderTime;
   lastRenderTime = now;
 
-  // Calculate current velocity from history
-  const velocity = calculateVelocity();
+  // Move at constant velocity
+  renderedLat += velocityLat * deltaTime;
+  renderedLng = normalizeLng(renderedLng + velocityLng * deltaTime);
 
-  // Predict where ISS should be right now based on last known position + velocity
-  const timeSinceFetch = now - lastFetchTime;
-  const predictedLat = currentPosition.lat + velocity.latPerMs * timeSinceFetch;
-  let predictedLng = currentPosition.lng + velocity.lngPerMs * timeSinceFetch;
-
-  // Normalize longitude
-  if (predictedLng > 180) predictedLng -= 360;
-  if (predictedLng < -180) predictedLng += 360;
-
-  // Smoothly move rendered position towards predicted position
-  // Higher factor = faster catch-up, lower = smoother but more lag
-  const smoothFactor = 0.1;
-
-  renderedLat = lerp(renderedLat, predictedLat, smoothFactor);
-  renderedLng = lerpLongitude(renderedLng, predictedLng, smoothFactor);
+  // Clamp latitude to valid range
+  renderedLat = Math.max(-90, Math.min(90, renderedLat));
 
   return {
     ...currentPosition,
