@@ -773,9 +773,8 @@ export function isMetarCacheReady(): boolean {
   return metarCacheReady;
 }
 
-// Fetch all METAR data - no-op since we use hardcoded temps from GitHub Actions
+// Fetch all METAR data from the JSON file
 export async function fetchAllMetar(): Promise<void> {
-  // Temperatures are pre-fetched by GitHub Actions and hardcoded
-  // This function exists for API compatibility
+  await refreshWeatherCache();
   metarCacheReady = true;
 }
