@@ -174,6 +174,67 @@ async function fetchWeather() {
   const outputPath = path.join(publicDir, 'weather-data.json');
   fs.writeFileSync(outputPath, JSON.stringify(weatherData));
   console.log(`Wrote ${Object.keys(airports).length} airports to ${outputPath}`);
+
+  // Also update the hardcoded fallback in metarService.ts
+  updateFallbackData(airports);
+}
+
+function updateFallbackData(airports) {
+  const servicePath = path.join(__dirname, '..', 'services', 'metarService.ts');
+
+  if (!fs.existsSync(servicePath)) {
+    console.log('metarService.ts not found, skipping fallback update');
+    return;
+  }
+
+  let content = fs.readFileSync(servicePath, 'utf8');
+
+  // Generate the new hardcoded data
+  const entries = Object.entries(airports).map(([icao, w]) => {
+    const conditions = w.condition ? [`"${w.condition}"`] : [];
+    return `"${icao}":{temp:${w.temp},conditions:[${conditions.join(',')}],intensity:null}`;
+  });
+
+  // Split into lines of ~10 entries for readability
+  const lines = [];
+  for (let i = 0; i < entries.length; i += 10) {
+    lines.push('  ' + entries.slice(i, i + 10).join(','));
+  }
+  const newData = lines.join(',\n');
+
+  // Find and replace the HARDCODED_WEATHER block
+  const startMarker = 'const HARDCODED_WEATHER: Record<string, AirportWeather> = {';
+  const endMarker = '};';
+
+  const startIdx = content.indexOf(startMarker);
+  if (startIdx === -1) {
+    console.log('Could not find HARDCODED_WEATHER in metarService.ts');
+    return;
+  }
+
+  // Find the closing brace for this object (the one followed by newline and FALLBACK_WEATHER)
+  const afterStart = content.indexOf('\n', startIdx);
+  const fallbackIdx = content.indexOf('const FALLBACK_WEATHER', startIdx);
+  if (fallbackIdx === -1) {
+    console.log('Could not find FALLBACK_WEATHER marker');
+    return;
+  }
+
+  // Find the }; just before FALLBACK_WEATHER
+  const endIdx = content.lastIndexOf('};', fallbackIdx);
+  if (endIdx === -1 || endIdx < startIdx) {
+    console.log('Could not find end of HARDCODED_WEATHER');
+    return;
+  }
+
+  // Replace the content
+  const newContent =
+    content.substring(0, afterStart + 1) +
+    newData + '\n' +
+    content.substring(endIdx);
+
+  fs.writeFileSync(servicePath, newContent);
+  console.log(`Updated HARDCODED_WEATHER in metarService.ts with ${Object.keys(airports).length} airports`);
 }
 
 fetchWeather().catch(console.error);
