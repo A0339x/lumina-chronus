@@ -6,6 +6,7 @@ export interface Airport {
   lat: number;
   lng: number;
   name: string;
+  utcOffset?: number; // UTC offset in hours (e.g., -5 for EST, +1 for CET)
 }
 
 export type WeatherCondition = "thunderstorm" | "snow" | "rain" | "fog" | "freezing" | null;
@@ -777,4 +778,128 @@ export function isMetarCacheReady(): boolean {
 export async function fetchAllMetar(): Promise<void> {
   await refreshWeatherCache();
   metarCacheReady = true;
+}
+
+// UTC offset lookup by ICAO code - uses standard time (not DST)
+// This provides accurate timezone data for displaying local times
+const TIMEZONE_OFFSETS: Record<string, number> = {
+  // US - Eastern (-5)
+  KATL: -5, KJFK: -5, KEWR: -5, KMIA: -5, KBOS: -5, KFLL: -5, KDTW: -5, KPHL: -5, KLGA: -5,
+  KBWI: -5, KDCA: -5, KIAD: -5, KMCO: -5, KCLT: -5, KRDU: -5, KPIT: -5, KCLE: -5, KCVG: -5,
+  KIND: -5, KTPA: -5, KBNA: -5,
+  // US - Central (-6)
+  KORD: -6, KDFW: -6, KIAH: -6, KMSP: -6, KSTL: -6, KMEM: -6, KAUS: -6, KSAT: -6, KHOU: -6,
+  KDAL: -6, KMDW: -6, KMCI: -6, KMKE: -6,
+  // US - Mountain (-7)
+  KDEN: -7, KPHX: -7, KSLC: -7, KLAS: -7,
+  // US - Pacific (-8)
+  KLAX: -8, KSFO: -8, KSEA: -8, KPDX: -8, KSAN: -8, KSMF: -8, KSJC: -8, KOAK: -8,
+  // US - Alaska (-9)
+  PANC: -9, PAFA: -9,
+  // US - Hawaii (-10)
+  KHNL: -10, PHOG: -10, PHKO: -10, PHLH: -10,
+  // Canada - Atlantic (-4)
+  CYHZ: -4, CYYT: -3.5, CYQB: -5, CYUL: -5, CYOW: -5, CYYZ: -5,
+  // Canada - Central (-6)
+  CYWG: -6, CYQT: -5,
+  // Canada - Mountain (-7)
+  CYYC: -7, CYEG: -7, CYZF: -7, CYXE: -6, CYQR: -6,
+  // Canada - Pacific (-8)
+  CYVR: -8, CYYJ: -8, CYLW: -8, CYXY: -8,
+  // Mexico (-6)
+  MMMX: -6, MMUN: -5, MMGL: -6, MMMY: -6, MMTJ: -8, MMSM: -6, MMMD: -6, MMCZ: -5, MMSD: -7,
+  // Central America (-6)
+  MGGT: -6, MSLP: -6, MHTG: -6, MNMG: -6, MROC: -6, MPTO: -5,
+  // Caribbean (-4 to -5)
+  MKJP: -5, TNCM: -4, TBPB: -4, TTPP: -4, MWCR: -5, MUHA: -5, MDSD: -4, MDPP: -4, MTPP: -5,
+  TJSJ: -4, TIST: -4, TLPL: -4, TAPA: -4,
+  // South America
+  SBGR: -3, SBGL: -3, SBBR: -3, SBCF: -3, SBSV: -3, SBRF: -3, SBPA: -3, SBCT: -3, SBFZ: -3, SBBV: -4,
+  SCEL: -4, SAEZ: -3, SABE: -3, SACO: -3, SAME: -3,
+  SLLP: -4, SLVR: -4, SPJC: -5, SEQM: -5, SEGU: -5,
+  SKBO: -5, SKMR: -5, SKCL: -5, SKMD: -5, SKRG: -5, SVMI: -4, SUMU: -3, SGAS: -4, SMJP: -3, SYCJ: -4,
+  // UK & Ireland (0)
+  EGLL: 0, EGKK: 0, EGSS: 0, EGLC: 0, EGCC: 0, EGBB: 0, EGPH: 0, EGPF: 0, EGGW: 0, EGNX: 0,
+  EGNT: 0, EGGP: 0, EGHI: 0, EGGD: 0, EGPD: 0, EGAA: 0, EIDW: 0, EICK: 0, EINN: 0,
+  // Western Europe (+1)
+  LFPG: 1, LFPO: 1, LFML: 1, LFLL: 1, LFMN: 1, LFBD: 1, LFBO: 1, LFRS: 1, LFSB: 1, LFPB: 1,
+  EDDF: 1, EDDM: 1, EDDB: 1, EDDL: 1, EDDH: 1, EDDK: 1, EDDS: 1, EDDW: 1, EDDN: 1, EDDV: 1, EDDP: 1,
+  LEMD: 1, LEBL: 1, LEPA: 1, LEMG: 1, LEVC: 1, LEAL: 1, LEZL: 1,
+  LPPT: 0, LPPR: 0, LPFR: 0, LPMA: 0,
+  LIRF: 1, LIMC: 1, LIME: 1, LIPZ: 1, LIRN: 1, LIML: 1, LIPE: 1, LICC: 1, LICJ: 1, LIRA: 1, LIRP: 1, LIMF: 1, LIEO: 1, LIEE: 1,
+  EHAM: 1, EHRD: 1, EHEH: 1, EBBR: 1, EBCI: 1, ELLX: 1,
+  LSZH: 1, LSGG: 1, LSZB: 1, LOWW: 1, LOWS: 1, LOWG: 1, LOWI: 1, LKPR: 1,
+  EPWA: 1, EPKK: 1, EPGD: 1, EPWR: 1, EPPO: 1,
+  EKCH: 1, ESSA: 1, ENGM: 1, EFHK: 2, BIKF: 0, ESGG: 1, ESMS: 1, ENBR: 1, ENZV: 1, ENTC: 1, EFOU: 2, EFRO: 2,
+  LHBP: 1, LROP: 2, LBSF: 2, LYBE: 1, LDZA: 1, LDDU: 1, LDSP: 1, LJLJ: 1, LWSK: 1, LATI: 1,
+  // Eastern Europe (+2 to +3)
+  UKBB: 2, UKLL: 2, UUEE: 3, UUDD: 3, UUWW: 3, ULLI: 3, UWWW: 4, USSS: 5, UNNT: 7, UUOB: 8, UHWW: 10, UEEE: 9,
+  // Greece, Turkey, Cyprus (+2 to +3)
+  LGAV: 2, LGTS: 2, LGIR: 2, LGKR: 2, LGRP: 2, LGSR: 2, LGMK: 2,
+  LTFM: 3, LTBA: 3, LTFJ: 3, LTAI: 3, LTAC: 3, LTBJ: 3, LTBS: 3, LTFE: 3,
+  LCLK: 2, LCPH: 2,
+  // Middle East (+3 to +4)
+  OMDB: 4, OMDW: 4, OMAA: 4, OMSJ: 4, OTHH: 3, OERK: 3, OEJN: 3, OEDF: 3, OEMA: 3,
+  OKBK: 3, OBBI: 3, OOMS: 4, OYAA: 3, OYSN: 3,
+  OIIE: 3.5, OIII: 3.5, OISS: 3.5, OIKB: 3.5, OIAW: 3.5, OIKK: 3.5, OICC: 3.5,
+  LLBG: 2, OLBA: 2, OJAM: 2, ORBI: 3, ORER: 3,
+  // North Africa (+0 to +2)
+  GMMN: 1, GMME: 1, GMMX: 1, GMTT: 1, GMFF: 1, GMAD: 1, DAAG: 1, DAOO: 1, DTTA: 1, DTMB: 1, DTTJ: 1,
+  HECA: 2, HEGN: 2, HESH: 2, HEBA: 2, HEAX: 2, HLLT: 2,
+  // West Africa (+0 to +1)
+  DNMM: 1, DNAA: 1, DGAA: 0, DIAP: 0, GOBD: 0, GABS: 0, GVNP: -1, GBYD: 0, GLRB: 0, DXXX: 0, DBBB: 1,
+  // East Africa (+3)
+  HKJK: 3, HKMO: 3, HTDA: 3, HTKJ: 3, HUEN: 3, HRYR: 2, HAAB: 3, HDAM: 3, HCMM: 3,
+  // Southern Africa (+2)
+  FMEE: 4, FIMP: 4, FMCH: 3, FMMI: 3, FSIA: 4, FKKD: 1, FKYS: 1, FOOL: 1, FZAA: 1, FCBB: 1,
+  FLLK: 2, FVHA: 2, FLLS: 2, FYWH: 2, FBSK: 2, FAOR: 2, FACT: 2, FALE: 2, FAPE: 2, FQMA: 2, FWKI: 2,
+  // Canary Islands (0)
+  GCLP: 0, GCTS: 0, GCLA: 0, GCFV: 0,
+  // China (+8)
+  ZBAA: 8, ZBAD: 8, ZSPD: 8, ZSSS: 8, ZGGG: 8, VHHH: 8, ZGSZ: 8, ZUUU: 8, ZUCK: 8, ZHCC: 8,
+  ZLXY: 8, ZWSH: 8, ZYHB: 8, ZYTX: 8, ZSAM: 8, ZGKL: 8, ZSNJ: 8, ZSHC: 8, ZPPP: 8, ZBTJ: 8, VMMC: 8,
+  // Japan (+9)
+  RJTT: 9, RJAA: 9, RJBB: 9, RJOO: 9, RJCC: 9, RJFF: 9, RJGG: 9, ROAH: 9, RJSS: 9, RJSN: 9, RJOK: 9,
+  // Korea (+9)
+  RKSI: 9, RKSS: 9, RKPK: 9, RKPC: 9, RKTN: 9, ZKPY: 9,
+  // Southeast Asia (+7 to +8)
+  WSSS: 8, WMKK: 8, WMKP: 8, WBKK: 8, WBGG: 8,
+  VTBS: 7, VTBD: 7, VTSP: 7, VTCC: 7, VTSS: 7, VTUK: 7,
+  VVNB: 7, VVTS: 7, VVDN: 7, VVCR: 7,
+  VDPP: 7, VDSR: 7, VLVT: 7, VLLB: 7,
+  VYYY: 6.5, VYMD: 6.5,
+  VGHS: 6, VGCG: 6, VECC: 5.5, VRMM: 5, VCBI: 5.5,
+  // Indonesia (+7 to +9)
+  WIII: 7, WADD: 8, WARR: 7, WIHH: 7, WIMM: 7, WIBB: 7, WAFF: 8, WICC: 7, WASS: 9,
+  // Philippines (+8)
+  RPLL: 8, RPLC: 8, RPVM: 8, RPVD: 8, RPVK: 8, WBSB: 8, WBLL: 8,
+  // India (+5.5)
+  VIDP: 5.5, VABB: 5.5, VOBL: 5.5, VOMM: 5.5, VEBS: 5.5, VOHY: 5.5, VAAH: 5.5, VOCI: 5.5, VAGO: 5.5,
+  VOTP: 5.5, VIAR: 5.5, VIJP: 5.5, VELR: 5.5, VOCL: 5.5, VOTV: 5.5, VEPT: 5.5, VNKT: 5.75,
+  // Pakistan (+5)
+  OPKC: 5, OPLA: 5, OPIS: 5,
+  // Taiwan (+8)
+  RCTP: 8, RCSS: 8, RCMQ: 8, RCKH: 8, RCNN: 8,
+  // Australia (+8 to +11)
+  YPPH: 8, YPAD: 9.5, YSSY: 10, YMML: 10, YBBN: 10, YBCG: 10, YBCS: 10, YSCB: 10, YMHB: 10,
+  // New Zealand (+12)
+  NZAA: 12, NZWN: 12, NZCH: 12, NZQN: 12, NZDN: 12,
+  // Pacific Islands
+  NFFN: 12, NWWW: 11, NTAA: -10, NSFA: 13, NIUE: -11, PGSN: 10, PGUM: 10,
+};
+
+// Get UTC offset for an airport
+export function getAirportUtcOffset(icao: string): number {
+  // Check direct lookup first
+  if (TIMEZONE_OFFSETS[icao] !== undefined) {
+    return TIMEZONE_OFFSETS[icao];
+  }
+
+  // Fallback: find the airport and estimate from longitude
+  const airport = AIRPORTS.find(a => a.icao === icao);
+  if (airport) {
+    return Math.round(airport.lng / 15);
+  }
+
+  return 0; // Default to UTC
 }

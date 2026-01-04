@@ -2,7 +2,7 @@ import React, { useEffect, useRef, memo, useState, useCallback } from 'react';
 import { ComposableMap, Geographies, Geography } from 'react-simple-maps';
 import { ZoomIn, ZoomOut, Maximize2, Maximize, Minimize } from 'lucide-react';
 import { FireworkEvent, TimezoneData } from '../types';
-import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportConditions, WeatherCondition, WeatherIntensity } from '../services/metarService';
+import { fetchAllMetar, getTempWithFallback, isMetarCacheReady, getNearestAirportInfo, NearestAirportInfo, getAirports, getAirportConditions, WeatherCondition, WeatherIntensity, getAirportUtcOffset } from '../services/metarService';
 import { getCountryInfo, CountryInfo } from '../services/countryData';
 import { useTemperature } from '../contexts/TemperatureContext';
 import { fetchFlightData, calculateFlightProgress, calculateDistanceFlown, FlightInfo, formatSquawkStatus } from '../services/flightService';
@@ -84,12 +84,11 @@ const getTimezoneLongitude = (offset: number): number => {
   return lng;
 };
 
-// Get local time at a location based on timezone (rounded to nearest hour offset)
-const getLocalTime = (lng: number): string => {
+// Get local time at an airport using precise timezone offset
+const getLocalTime = (icao: string): string => {
   const now = new Date();
-  // Calculate UTC offset from longitude (15° per hour), rounded to nearest hour
-  // This approximates actual timezones better than exact longitude-based solar time
-  const offsetHours = Math.round(lng / 15);
+  // Get precise UTC offset for this airport
+  const offsetHours = getAirportUtcOffset(icao);
   // Get UTC time in milliseconds and add offset
   const localTime = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
   // Format as HH:MM with AM/PM
@@ -1652,7 +1651,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                         Nearest Station
                       </span>
                       <span className="text-[10px] text-amber-300/80 font-medium">
-                        {getLocalTime(hoverInfo.airportInfo.airport.lng)}
+                        {getLocalTime(hoverInfo.airportInfo.airport.icao)}
                       </span>
                     </div>
                     <p className="text-indigo-200 text-sm font-medium mb-1">
@@ -1686,7 +1685,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
                     Island / Coastal
                   </span>
                   <span className="text-[10px] text-amber-300/80 font-medium">
-                    {getLocalTime(hoverInfo.airportInfo.airport.lng)}
+                    {getLocalTime(hoverInfo.airportInfo.airport.icao)}
                   </span>
                 </div>
                 <p className="text-indigo-200 text-sm font-medium mb-1">
