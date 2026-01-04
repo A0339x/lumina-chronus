@@ -84,11 +84,12 @@ const getTimezoneLongitude = (offset: number): number => {
   return lng;
 };
 
-// Get local time at a location based on longitude
+// Get local time at a location based on timezone (rounded to nearest hour offset)
 const getLocalTime = (lng: number): string => {
   const now = new Date();
-  // Calculate UTC offset from longitude (15° per hour)
-  const offsetHours = lng / 15;
+  // Calculate UTC offset from longitude (15° per hour), rounded to nearest hour
+  // This approximates actual timezones better than exact longitude-based solar time
+  const offsetHours = Math.round(lng / 15);
   // Get UTC time in milliseconds and add offset
   const localTime = new Date(now.getTime() + offsetHours * 60 * 60 * 1000);
   // Format as HH:MM with AM/PM
