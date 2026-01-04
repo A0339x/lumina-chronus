@@ -165,13 +165,12 @@ interface FlightHoverInfo {
 }
 
 // Map projection constants (must match ComposableMap settings)
-// Scale 127 fits full world width (360°) within SVG_WIDTH (800px)
-// 800 / (360 × π/180) ≈ 127
-const MAP_SCALE = 127;
+const MAP_SCALE = 220;
 const MAP_CENTER_LNG = 0;
 const MAP_CENTER_LAT = 20;
-// react-simple-maps default SVG dimensions
-const SVG_WIDTH = 800;
+// SVG dimensions - width calculated to fit full world at scale 220
+// 360° × 220 × (π/180) ≈ 1382px needed for full world width
+const SVG_WIDTH = 1400;
 const SVG_HEIGHT = 600;
 const SVG_ASPECT = SVG_WIDTH / SVG_HEIGHT;
 
@@ -342,7 +341,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   // Zoom constraints
   const MIN_ZOOM = 1;
   const MAX_ZOOM = 6;
-  const BASE_SCALE = 127; // Must match MAP_SCALE - fits full world at zoom 1
+  const BASE_SCALE = 220; // Must match MAP_SCALE
   const planePositionsRef = useRef<Map<string, { x: number; y: number; bearing: number }>>(new Map());
   const hoveredFlightRef = useRef<string | null>(null);
   const liveFlightsRef = useRef<Map<string, FlightInfo>>(new Map());
@@ -1379,6 +1378,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <ComposableMap
           projection="geoEquirectangular"
+          width={SVG_WIDTH}
+          height={SVG_HEIGHT}
           projectionConfig={{
             scale: BASE_SCALE * zoom,
             center: center
@@ -1427,6 +1428,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       >
         <ComposableMap
           projection="geoEquirectangular"
+          width={SVG_WIDTH}
+          height={SVG_HEIGHT}
           projectionConfig={{
             scale: BASE_SCALE * zoom,
             center: center
