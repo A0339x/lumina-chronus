@@ -168,11 +168,9 @@ interface FlightHoverInfo {
 const MAP_SCALE = 220;
 const MAP_CENTER_LNG = 0;
 const MAP_CENTER_LAT = 20;
-// SVG dimensions - width calculated to fit full world at scale 220
-// 360° × 220 × (π/180) ≈ 1382px needed for full world width
-const SVG_WIDTH = 1400;
-const SVG_HEIGHT = 600;
-const SVG_ASPECT = SVG_WIDTH / SVG_HEIGHT;
+// Minimum pixels per degree to show full world width
+// 360° × scale × (π/180) gives total width needed
+const MIN_WORLD_WIDTH = 360 * MAP_SCALE * (Math.PI / 180); // ~1382px
 
 // Convert screen coordinates to lat/lng based on equirectangular projection
 const screenToLatLng = (
@@ -181,27 +179,30 @@ const screenToLatLng = (
   containerWidth: number,
   containerHeight: number,
   zoomLevel: number = 1,
-  mapCenter: [number, number] = [MAP_CENTER_LNG, MAP_CENTER_LAT]
+  mapCenter: [number, number] = [MAP_CENTER_LNG, MAP_CENTER_LAT],
+  svgWidth: number = containerWidth,
+  svgHeight: number = containerHeight
 ): { lat: number; lng: number } => {
   // SVG preserves aspect ratio (xMidYMid meet) - calculate actual rendered size
+  const svgAspect = svgWidth / svgHeight;
   const containerAspect = containerWidth / containerHeight;
 
   let svgX, svgY;
 
-  if (containerAspect > SVG_ASPECT) {
+  if (containerAspect > svgAspect) {
     // Container is wider than SVG - SVG fitted to height, centered horizontally
-    const scale = containerHeight / SVG_HEIGHT;
-    const renderedWidth = SVG_WIDTH * scale;
+    const scale = containerHeight / svgHeight;
+    const renderedWidth = svgWidth * scale;
     const offsetX = (containerWidth - renderedWidth) / 2;
-    svgX = ((screenX - offsetX) / renderedWidth) * SVG_WIDTH;
-    svgY = (screenY / containerHeight) * SVG_HEIGHT;
+    svgX = ((screenX - offsetX) / renderedWidth) * svgWidth;
+    svgY = (screenY / containerHeight) * svgHeight;
   } else {
     // Container is taller than SVG - SVG fitted to width, centered vertically
-    const scale = containerWidth / SVG_WIDTH;
-    const renderedHeight = SVG_HEIGHT * scale;
+    const scale = containerWidth / svgWidth;
+    const renderedHeight = svgHeight * scale;
     const offsetY = (containerHeight - renderedHeight) / 2;
-    svgX = (screenX / containerWidth) * SVG_WIDTH;
-    svgY = ((screenY - offsetY) / renderedHeight) * SVG_HEIGHT;
+    svgX = (screenX / containerWidth) * svgWidth;
+    svgY = ((screenY - offsetY) / renderedHeight) * svgHeight;
   }
 
   // For d3 geoEquirectangular projection:
@@ -210,8 +211,8 @@ const screenToLatLng = (
   const pixelsPerDegree = (MAP_SCALE * zoomLevel) * (Math.PI / 180);
 
   // SVG center corresponds to map center
-  const svgCenterX = SVG_WIDTH / 2;
-  const svgCenterY = SVG_HEIGHT / 2;
+  const svgCenterX = svgWidth / 2;
+  const svgCenterY = svgHeight / 2;
 
   // Convert SVG coords to lat/lng using current map center
   const lng = mapCenter[0] + (svgX - svgCenterX) / pixelsPerDegree;
@@ -256,6 +257,18 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const issCanvasPosRef = useRef<{ x: number; y: number } | null>(null);
   const flightProgressRef = useRef(0);
 
+  // Container dimensions for responsive SVG viewport
+  const [containerSize, setContainerSize] = useState({ width: 1400, height: 600 });
+
+  // SVG dimensions - ensure width is enough to show full world at scale 220
+  const svgWidth = Math.max(containerSize.width, MIN_WORLD_WIDTH);
+  const svgHeight = containerSize.height;
+  const svgAspect = svgWidth / svgHeight;
+
+  // Refs for SVG dimensions (for animation loop access)
+  const svgDimensionsRef = useRef({ width: svgWidth, height: svgHeight, aspect: svgAspect });
+  svgDimensionsRef.current = { width: svgWidth, height: svgHeight, aspect: svgAspect };
+
   // Zoom and pan state - using animated values for smooth transitions
   const [zoom, setZoom] = useState(1);           // Current animated zoom
   const [targetZoom, setTargetZoom] = useState(1); // Target zoom to animate toward
@@ -269,6 +282,26 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const targetCenterRef = useRef<[number, number]>([0, 20]);
   const animationRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
+
+  // Track container size for responsive SVG viewport
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      setContainerSize({ width: rect.width, height: rect.height });
+    };
+
+    // Initial size
+    updateSize();
+
+    // Observe resize
+    const resizeObserver = new ResizeObserver(updateSize);
+    resizeObserver.observe(container);
+
+    return () => resizeObserver.disconnect();
+  }, []);
 
   // Keep target refs in sync
   useEffect(() => {
@@ -555,7 +588,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
     // Convert pixel movement to degrees (adjusted for zoom)
     // Use zoomRef for consistent calculation with canvas
-    const pixelsPerDegree = (BASE_SCALE * zoomRef.current) * (Math.PI / 180) * (rect.width / SVG_WIDTH);
+    const pixelsPerDegree = (BASE_SCALE * zoomRef.current) * (Math.PI / 180) * (rect.width / svgDimensionsRef.current.width);
     const dLng = -dx / pixelsPerDegree;
     const dLat = dy / pixelsPerDegree;
 
@@ -859,26 +892,27 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       // Use current zoom level and center from refs
       const currentZoom = zoomRef.current;
       const currentCenter = centerRef.current;
+      const { width: currentSvgWidth, height: currentSvgHeight, aspect: currentSvgAspect } = svgDimensionsRef.current;
       const pixelsPerDegree = (MAP_SCALE * currentZoom) * (Math.PI / 180);
 
       // Convert to SVG coordinates using current center
-      const svgX = (SVG_WIDTH / 2) + (lng - currentCenter[0]) * pixelsPerDegree;
-      const svgY = (SVG_HEIGHT / 2) - (lat - currentCenter[1]) * pixelsPerDegree;
+      const svgX = (currentSvgWidth / 2) + (lng - currentCenter[0]) * pixelsPerDegree;
+      const svgY = (currentSvgHeight / 2) - (lat - currentCenter[1]) * pixelsPerDegree;
 
       // Convert SVG coords to canvas coords (accounting for aspect ratio)
       const containerAspect = canvas.width / canvas.height;
 
       let canvasX, canvasY;
-      if (containerAspect > SVG_ASPECT) {
+      if (containerAspect > currentSvgAspect) {
         // Container wider - SVG fitted to height
-        const scale = canvas.height / SVG_HEIGHT;
-        const offsetX = (canvas.width - SVG_WIDTH * scale) / 2;
+        const scale = canvas.height / currentSvgHeight;
+        const offsetX = (canvas.width - currentSvgWidth * scale) / 2;
         canvasX = offsetX + svgX * scale;
         canvasY = svgY * scale;
       } else {
         // Container taller - SVG fitted to width
-        const scale = canvas.width / SVG_WIDTH;
-        const offsetY = (canvas.height - SVG_HEIGHT * scale) / 2;
+        const scale = canvas.width / currentSvgWidth;
+        const offsetY = (canvas.height - currentSvgHeight * scale) / 2;
         canvasX = svgX * scale;
         canvasY = offsetY + svgY * scale;
       }
@@ -1378,8 +1412,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       <div id="land-mask-map" className="absolute inset-0 w-full h-full opacity-0 pointer-events-none overflow-hidden" aria-hidden="true">
         <ComposableMap
           projection="geoEquirectangular"
-          width={SVG_WIDTH}
-          height={SVG_HEIGHT}
+          width={svgWidth}
+          height={svgHeight}
           projectionConfig={{
             scale: BASE_SCALE * zoom,
             center: center
@@ -1428,8 +1462,8 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       >
         <ComposableMap
           projection="geoEquirectangular"
-          width={SVG_WIDTH}
-          height={SVG_HEIGHT}
+          width={svgWidth}
+          height={svgHeight}
           projectionConfig={{
             scale: BASE_SCALE * zoom,
             center: center
