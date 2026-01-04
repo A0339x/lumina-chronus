@@ -290,19 +290,47 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
 
     const updateSize = () => {
       const rect = container.getBoundingClientRect();
-      setContainerSize({ width: rect.width, height: rect.height });
+      if (rect.width > 0 && rect.height > 0) {
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
     };
 
-    // Initial size + update after a frame (for fullscreen transitions)
+    // Initial size
     updateSize();
-    requestAnimationFrame(updateSize);
 
-    // Observe resize
+    // Observe resize - this handles window resizes and layout changes
     const resizeObserver = new ResizeObserver(updateSize);
     resizeObserver.observe(container);
 
     return () => resizeObserver.disconnect();
-  }, [isFullscreen]); // Re-run when fullscreen changes
+  }, []); // Setup once, ResizeObserver handles all size changes
+
+  // Handle fullscreen transitions - wait for DOM to settle
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const updateSize = () => {
+      const rect = container.getBoundingClientRect();
+      if (rect.width > 0 && rect.height > 0) {
+        setContainerSize({ width: rect.width, height: rect.height });
+      }
+    };
+
+    // Wait for CSS transition to complete before measuring
+    // Use nested rAF to ensure we're past the layout/paint phases
+    let frame1: number, frame2: number;
+    frame1 = requestAnimationFrame(() => {
+      frame2 = requestAnimationFrame(() => {
+        updateSize();
+      });
+    });
+
+    return () => {
+      cancelAnimationFrame(frame1);
+      cancelAnimationFrame(frame2);
+    };
+  }, [isFullscreen]);
 
   // Keep target refs in sync
   useEffect(() => {
