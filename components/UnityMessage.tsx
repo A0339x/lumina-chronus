@@ -39,9 +39,9 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
         scale: isExiting ? 1.05 : 1
       }}
       transition={{ duration: isExiting ? 0.8 : 1.5, ease: "easeOut" }}
-      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 backdrop-blur-md overflow-y-auto py-4"
     >
-      <div className="text-center px-4 max-w-[95vw] overflow-hidden">
+      <div className="text-center px-4 max-w-[95vw] my-auto">
         {/* Animated globe icon */}
         <motion.div
           animate={{
@@ -145,10 +145,10 @@ const UnityMessage: React.FC<UnityMessageProps> = ({ onShowEarth }) => {
           transition={{ delay: isExiting ? 0 : 4, duration: 0.8 }}
           onClick={handleShowEarth}
           disabled={isExiting}
-          className="mt-[2.5vh] inline-flex items-center gap-2 px-[1.5vw] py-[1vh] rounded-full bg-white/5 border border-white/20 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/30 transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed"
+          className="mt-[2vh] mb-4 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/20 text-white/70 hover:bg-white/10 hover:text-white hover:border-white/30 transition-all duration-300 group disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <MapIcon size={mapIconSize} className="group-hover:text-indigo-300 transition-colors" />
-          <span className="text-[clamp(0.7rem,1vw,0.875rem)] tracking-wide">View the Celebration</span>
+          <span className="text-[clamp(0.75rem,1.2vw,0.875rem)] tracking-wide">View the Celebration</span>
         </motion.button>
       </div>
     </motion.div>
