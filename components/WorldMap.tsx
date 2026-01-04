@@ -565,18 +565,76 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     }
   }, [currentCountry, hoverInfo]);
 
-  // Zoom with mouse wheel - smooth animated zoom
+  // Zoom with mouse wheel - zoom toward cursor position
   const handleWheel = useCallback((event: React.WheelEvent) => {
     event.preventDefault();
-    const delta = event.deltaY > 0 ? -0.25 : 0.25; // Slightly larger steps for wheel
-    setTargetZoom(prev => {
-      const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, prev + delta * prev));
-      // Reset center when zooming back to 1x
-      if (newZoom <= 1) {
-        setTargetCenter([0, 20]);
-      }
-      return newZoom;
-    });
+
+    const container = mapContainerRef.current;
+    if (!container) return;
+
+    const rect = container.getBoundingClientRect();
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    const currentZoom = targetZoomRef.current;
+    const currentCenter = targetCenterRef.current;
+    const { width: currentSvgWidth, height: currentSvgHeight } = svgDimensionsRef.current;
+
+    // Get the lat/lng under the cursor at current zoom
+    const cursorLatLng = screenToLatLng(
+      mouseX, mouseY,
+      rect.width, rect.height,
+      currentZoom, currentCenter,
+      currentSvgWidth, currentSvgHeight
+    );
+
+    // Calculate new zoom level
+    const delta = event.deltaY > 0 ? -0.25 : 0.25;
+    const newZoom = Math.max(MIN_ZOOM, Math.min(MAX_ZOOM, currentZoom + delta * currentZoom));
+
+    // Reset center when zooming back to 1x
+    if (newZoom <= 1) {
+      setTargetZoom(1);
+      setTargetCenter([0, 20]);
+      return;
+    }
+
+    // Calculate new center so the cursor stays over the same lat/lng
+    // At the new zoom, the cursor position should still point to cursorLatLng
+    const pixelsPerDegreeNew = (MAP_SCALE * newZoom) * (Math.PI / 180);
+
+    // Calculate where the cursor is in SVG coordinates
+    const svgAspect = currentSvgWidth / currentSvgHeight;
+    const containerAspect = rect.width / rect.height;
+
+    let svgX, svgY;
+    if (containerAspect > svgAspect) {
+      const scale = rect.height / currentSvgHeight;
+      const renderedWidth = currentSvgWidth * scale;
+      const offsetX = (rect.width - renderedWidth) / 2;
+      svgX = ((mouseX - offsetX) / renderedWidth) * currentSvgWidth;
+      svgY = (mouseY / rect.height) * currentSvgHeight;
+    } else {
+      const scale = rect.width / currentSvgWidth;
+      const renderedHeight = currentSvgHeight * scale;
+      const offsetY = (rect.height - renderedHeight) / 2;
+      svgX = (mouseX / rect.width) * currentSvgWidth;
+      svgY = ((mouseY - offsetY) / renderedHeight) * currentSvgHeight;
+    }
+
+    const svgCenterX = currentSvgWidth / 2;
+    const svgCenterY = currentSvgHeight / 2;
+
+    // New center = cursorLatLng adjusted by the offset from cursor to SVG center
+    const newCenterLng = cursorLatLng.lng - (svgX - svgCenterX) / pixelsPerDegreeNew;
+    const newCenterLat = cursorLatLng.lat + (svgY - svgCenterY) / pixelsPerDegreeNew;
+
+    // Clamp the center to reasonable bounds
+    const clampedLat = Math.max(-60, Math.min(80, newCenterLat));
+    const clampedLng = ((newCenterLng + 180) % 360 + 360) % 360 - 180; // Wrap to -180..180
+
+    setTargetZoom(newZoom);
+    setTargetCenter([clampedLng, clampedLat]);
   }, []);
 
   // Start drag for panning
