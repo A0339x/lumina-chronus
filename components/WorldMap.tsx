@@ -165,7 +165,9 @@ interface FlightHoverInfo {
 }
 
 // Map projection constants (must match ComposableMap settings)
-const MAP_SCALE = 220;
+// Scale 127 fits full world width (360°) within SVG_WIDTH (800px)
+// 800 / (360 × π/180) ≈ 127
+const MAP_SCALE = 127;
 const MAP_CENTER_LNG = 0;
 const MAP_CENTER_LAT = 20;
 // react-simple-maps default SVG dimensions
@@ -340,7 +342,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   // Zoom constraints
   const MIN_ZOOM = 1;
   const MAX_ZOOM = 6;
-  const BASE_SCALE = 220;
+  const BASE_SCALE = 127; // Must match MAP_SCALE - fits full world at zoom 1
   const planePositionsRef = useRef<Map<string, { x: number; y: number; bearing: number }>>(new Map());
   const hoveredFlightRef = useRef<string | null>(null);
   const liveFlightsRef = useRef<Map<string, FlightInfo>>(new Map());
