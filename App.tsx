@@ -364,8 +364,8 @@ const App: React.FC = () => {
 
           {/* Middle Section: World Map - MAIN FOCUS */}
           <section className={`w-full flex-1 flex flex-col items-center justify-center min-h-0 relative ${isMapFullscreen ? 'py-0' : 'py-1'}`}>
-              <div className={`w-full h-full flex items-center justify-center ${isMapFullscreen ? '' : 'max-w-7xl'}`}>
-                  <div className={`${isMapFullscreen ? 'w-full h-full' : 'w-full h-full max-h-[60vh] aspect-[2.5/1]'}`}>
+              <div className="w-full h-full flex items-center justify-center">
+                  <div className={`${isMapFullscreen ? 'w-full h-full' : 'w-full h-full max-h-[60vh]'}`}>
                       <WorldMap
                         activeFireworks={mapFireworks}
                         pastTimezones={pastTimezones}
