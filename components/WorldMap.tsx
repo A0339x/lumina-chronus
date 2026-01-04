@@ -293,15 +293,16 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
       setContainerSize({ width: rect.width, height: rect.height });
     };
 
-    // Initial size
+    // Initial size + update after a frame (for fullscreen transitions)
     updateSize();
+    requestAnimationFrame(updateSize);
 
     // Observe resize
     const resizeObserver = new ResizeObserver(updateSize);
     resizeObserver.observe(container);
 
     return () => resizeObserver.disconnect();
-  }, []);
+  }, [isFullscreen]); // Re-run when fullscreen changes
 
   // Keep target refs in sync
   useEffect(() => {
