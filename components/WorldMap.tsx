@@ -260,9 +260,13 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   // Container dimensions for responsive SVG viewport
   const [containerSize, setContainerSize] = useState({ width: 1400, height: 600 });
 
+  // In fullscreen mode, use window dimensions directly (more reliable than measuring)
+  const effectiveWidth = isFullscreen ? window.innerWidth : containerSize.width;
+  const effectiveHeight = isFullscreen ? window.innerHeight : containerSize.height;
+
   // SVG dimensions - ensure width is enough to show full world at scale 220
-  const svgWidth = Math.max(containerSize.width, MIN_WORLD_WIDTH);
-  const svgHeight = containerSize.height;
+  const svgWidth = Math.max(effectiveWidth, MIN_WORLD_WIDTH);
+  const svgHeight = effectiveHeight;
   const svgAspect = svgWidth / svgHeight;
 
   // Refs for SVG dimensions (for animation loop access)
@@ -283,7 +287,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   const animationRef = useRef<number | null>(null);
   const isDraggingRef = useRef(false);
 
-  // Track container size for responsive SVG viewport
+  // Track container size for responsive SVG viewport (non-fullscreen mode)
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
@@ -298,39 +302,20 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
     // Initial size
     updateSize();
 
-    // Observe resize - this handles window resizes and layout changes
+    // Observe container resize
     const resizeObserver = new ResizeObserver(updateSize);
     resizeObserver.observe(container);
 
     return () => resizeObserver.disconnect();
-  }, []); // Setup once, ResizeObserver handles all size changes
+  }, []);
 
-  // Handle fullscreen transitions - wait for DOM to settle
+  // Force re-render on window resize (for fullscreen mode which uses window dimensions)
+  const [, forceUpdate] = useState(0);
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
-
-    const updateSize = () => {
-      const rect = container.getBoundingClientRect();
-      if (rect.width > 0 && rect.height > 0) {
-        setContainerSize({ width: rect.width, height: rect.height });
-      }
-    };
-
-    // Wait for CSS transition to complete before measuring
-    // Use nested rAF to ensure we're past the layout/paint phases
-    let frame1: number, frame2: number;
-    frame1 = requestAnimationFrame(() => {
-      frame2 = requestAnimationFrame(() => {
-        updateSize();
-      });
-    });
-
-    return () => {
-      cancelAnimationFrame(frame1);
-      cancelAnimationFrame(frame2);
-    };
-  }, [isFullscreen]);
+    const handleResize = () => forceUpdate(n => n + 1);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Keep target refs in sync
   useEffect(() => {
@@ -1433,7 +1418,7 @@ const WorldMap: React.FC<WorldMapProps> = ({ activeFireworks, pastTimezones, dev
   }, [landMask, metarReady, isFullscreen]); // isFullscreen triggers canvas resize when toggled
 
   return (
-    <div ref={containerRef} className="relative w-full h-full">
+    <div ref={containerRef} className={`${isFullscreen ? 'fixed inset-0 z-50 bg-slate-950' : 'relative w-full h-full'}`}>
       {/* Hidden canvas for land mask */}
       <canvas ref={maskCanvasRef} className="hidden" />
 

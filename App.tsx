@@ -289,7 +289,7 @@ const App: React.FC = () => {
         {/* MOBILE LAYOUT - Full screen map with overlays (up to 1024px) */}
         <div className="lg:hidden relative z-10 w-full h-full flex items-center justify-center">
           {/* Full screen map - users are in landscape mode */}
-          <div className={`${isMapFullscreen ? 'fixed inset-0 z-50' : 'absolute inset-0'}`}>
+          <div className="absolute inset-0">
             <WorldMap
               activeFireworks={mapFireworks}
               pastTimezones={pastTimezones}
@@ -365,7 +365,7 @@ const App: React.FC = () => {
           {/* Middle Section: World Map - MAIN FOCUS */}
           <section className={`w-full flex-1 flex flex-col items-center justify-center min-h-0 relative ${isMapFullscreen ? 'py-0' : 'py-1'}`}>
               <div className={`w-full h-full flex items-center justify-center ${isMapFullscreen ? '' : 'max-w-7xl'}`}>
-                  <div className={`${isMapFullscreen ? 'fixed inset-0 z-50' : 'w-full h-full max-h-[60vh] aspect-[2.5/1]'}`}>
+                  <div className={`${isMapFullscreen ? 'w-full h-full' : 'w-full h-full max-h-[60vh] aspect-[2.5/1]'}`}>
                       <WorldMap
                         activeFireworks={mapFireworks}
                         pastTimezones={pastTimezones}
