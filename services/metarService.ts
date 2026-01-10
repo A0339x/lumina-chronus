@@ -559,13 +559,13 @@ const AIRPORTS: Airport[] = [
 // Dynamic weather cache - fetched from Cloudflare Worker
 interface AirportWeather { temp: number; conditions: WeatherCondition[]; intensity: WeatherIntensity; }
 
-// Weather cache - populated from static JSON (updated by GitHub Actions)
+// Weather cache - populated from Cloudflare KV via API (refreshes every 10 min)
 let weatherCache: Map<string, AirportWeather> = new Map();
 let lastWeatherFetch = 0;
 let weatherFetchInProgress = false;
 const WEATHER_CACHE_TTL = 600000; // 10 minutes
 
-// Fetch weather data from static JSON file (updated every 15 min by GitHub Actions)
+// Fetch weather data from Cloudflare Pages Function (KV-backed, always fresh)
 async function refreshWeatherCache(): Promise<void> {
   if (weatherFetchInProgress) return;
 
@@ -575,14 +575,16 @@ async function refreshWeatherCache(): Promise<void> {
   weatherFetchInProgress = true;
 
   try {
-    const response = await fetch('/weather-data.json', {
-      signal: AbortSignal.timeout(10000),
+    // Fetch from API endpoint (KV-backed, refreshes from Open-Meteo every 10 min)
+    const response = await fetch('/api/data?type=weather', {
+      signal: AbortSignal.timeout(15000),
     });
 
     if (response.ok) {
       const data = await response.json() as {
         airports: Record<string, { temp: number; condition: string | null }>;
         updatedAt: string;
+        source?: string;
       };
 
       if (data.airports) {
@@ -596,12 +598,43 @@ async function refreshWeatherCache(): Promise<void> {
             intensity: null,
           });
         }
-        console.log(`[Weather] Loaded ${Object.keys(data.airports).length} airports, updated: ${data.updatedAt}`);
+        console.log(`[Weather] Loaded ${Object.keys(data.airports).length} airports (${data.source || 'api'}), updated: ${data.updatedAt}`);
+      }
+      lastWeatherFetch = now;
+      weatherFetchInProgress = false;
+      return;
+    }
+  } catch (error) {
+    console.error('API weather fetch failed:', error);
+  }
+
+  // Fallback to static JSON if API fails
+  try {
+    const fallbackResponse = await fetch('/weather-data.json', {
+      signal: AbortSignal.timeout(10000),
+    });
+    if (fallbackResponse.ok) {
+      const data = await fallbackResponse.json() as {
+        airports: Record<string, { temp: number; condition: string | null }>;
+        updatedAt: string;
+      };
+      if (data.airports) {
+        for (const [icao, weather] of Object.entries(data.airports)) {
+          const conditions: WeatherCondition[] = weather.condition
+            ? [weather.condition as WeatherCondition]
+            : [];
+          weatherCache.set(icao, {
+            temp: weather.temp,
+            conditions,
+            intensity: null,
+          });
+        }
+        console.log(`[Weather] Fallback: loaded ${Object.keys(data.airports).length} airports from static JSON`);
       }
       lastWeatherFetch = now;
     }
-  } catch (error) {
-    console.error('Failed to fetch weather:', error);
+  } catch (fallbackError) {
+    console.error('Fallback weather fetch failed:', fallbackError);
   } finally {
     weatherFetchInProgress = false;
   }
