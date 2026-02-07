@@ -17,10 +17,10 @@ const getLocalTime = (tz: TimezoneData): Date => {
 const hasTimezoneСelebrated = (tz: TimezoneData): boolean => {
   const localTime = getLocalTime(tz);
   const month = localTime.getMonth(); // 0 = January
-  const day = localTime.getDate();
 
-  // January 1st or later = celebrated
-  return month === 0 && day >= 1;
+  // Any time after December = celebrated (month > 0 means we're past Jan 1)
+  // During January, any day >= 1 means celebrated
+  return month > 0 || (month === 0 && localTime.getDate() >= 1);
 };
 
 /**
